@@ -1,0 +1,1799 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <!-- maximum-scale=1 evita el zoom accidental al tocar controles en iOS -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4a1220">
+  <title>Enna 30</title>
+
+  <!-- Fraunces para titulares (Google Fonts) y Leaflet para el mapa -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+
+  <style>
+    /* ===== 1. Tokens de diseño: bordó y pasteles ===== */
+    :root {
+      --bordo: #6b1e2e;
+      --bordo-hondo: #4a1220;
+      --rosa: #f4c7c3;
+      --melocoton: #f7d9c4;
+      --crema: #fbf1ea;
+      --texto: #4a1220;
+      --texto-suave: #7a4a55;
+    }
+
+    /* ===== 2. Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html {
+      color-scheme: light;
+      scrollbar-color: var(--rosa) var(--bordo-hondo);
+    }
+
+    ::selection {
+      background: var(--rosa);
+      color: var(--bordo-hondo);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      color: var(--texto);
+      /* Trama de puntos pastel sobre un degradado bordó */
+      background-color: var(--bordo-hondo);
+      background-image:
+        radial-gradient(rgba(244, 199, 195, 0.09) 1px, transparent 1.5px),
+        radial-gradient(120% 80% at 50% 0%, var(--bordo) 0%, var(--bordo-hondo) 70%);
+      background-size: 18px 18px, auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ===== 3. Tarjeta principal (estilo Story) ===== */
+    .app {
+      width: 100%;
+      max-width: 420px;
+      background: var(--crema);
+      border-radius: 28px;
+      padding: 28px 22px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      position: relative;
+    }
+
+    /* Marco interior fino, como un billete o una carta */
+    .app::before {
+      content: "";
+      position: absolute;
+      inset: 8px;
+      border: 1px dashed rgba(107, 30, 46, 0.25);
+      border-radius: 22px;
+      pointer-events: none;
+    }
+
+    /* Solo una fase visible a la vez */
+    .step { display: none; }
+    .step.active { display: block; animation: entrada 0.5s ease both; }
+
+    @keyframes entrada {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ===== 4. Tipografía y elementos comunes ===== */
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border: 1px solid var(--bordo);
+      border-radius: 999px;
+      color: var(--bordo);
+      background: var(--melocoton);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    h1 {
+      margin-top: 18px;
+      font-size: 1.75rem;
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      text-wrap: balance;
+    }
+
+    .lead {
+      margin-top: 10px;
+      color: var(--texto-suave);
+      line-height: 1.5;
+      font-size: 1rem;
+    }
+
+    /* ===== 5. Cuenta atrás ===== */
+    .timer {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 24px 0 4px;
+    }
+
+    .unit {
+      background: var(--melocoton);
+      border-radius: 16px;
+      padding: 12px 4px;
+      text-align: center;
+    }
+
+    .unit b {
+      display: block;
+      font-size: 1.6rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--bordo);
+    }
+
+    .unit span {
+      font-size: 0.7rem;
+      color: var(--texto-suave);
+    }
+
+    .finish-msg {
+      display: none;
+      margin: 24px 0 4px;
+      text-align: center;
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--bordo);
+    }
+
+    /* ===== 6. Botones y controles (áreas táctiles amplias) ===== */
+    .btn {
+      display: block;
+      width: 100%;
+      min-height: 52px;
+      margin-top: 20px;
+      font: inherit;
+      font-size: 1rem; /* 16px mínimo: sin zoom en iOS */
+      font-weight: 700;
+      color: var(--crema);
+      background: var(--bordo);
+      border: 0;
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s ease, filter 0.2s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .btn[hidden] { display: none; }
+
+    @media (hover: hover) {
+      .btn:hover:not(:disabled) { filter: brightness(1.12); }
+    }
+
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.6; cursor: default; }
+
+    .btn:focus-visible,
+    .item:focus-visible,
+    .pista-revelar:focus-visible,
+    input:focus-visible {
+      outline: 3px solid var(--bordo);
+      outline-offset: 3px;
+    }
+
+    /* ===== 7. Maleta: objetos que se marcan ===== */
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      min-height: 56px;
+      margin-top: 12px;
+      padding: 14px 16px;
+      font: inherit;
+      font-size: 1rem;
+      line-height: 1.35;
+      text-align: left;
+      color: var(--texto);
+      background: var(--rosa);
+      border: 1px solid transparent;
+      border-radius: 18px;
+      cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .item svg {
+      flex-shrink: 0;
+      width: 26px;
+      height: 26px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .item[aria-pressed="true"] {
+      background: var(--melocoton);
+      border-color: var(--bordo);
+    }
+
+    /* ===== 8. Candado ===== */
+    .candado {
+      margin-top: 16px;
+      padding: 16px;
+      background: var(--melocoton);
+      border-radius: 18px;
+    }
+
+    .candado label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .candado-fila {
+      display: flex;
+      gap: 8px;
+    }
+
+    .candado input {
+      flex: 1;
+      min-width: 0;
+      min-height: 48px;
+      padding: 0 14px;
+      font: inherit;
+      font-size: 1rem; /* 16px: sin zoom en iOS */
+      color: var(--texto);
+      background: var(--crema);
+      border: 1px solid var(--bordo);
+      border-radius: 12px;
+    }
+
+    .candado button {
+      min-height: 48px;
+      padding: 0 16px;
+      font: inherit;
+      font-weight: 700;
+      color: var(--crema);
+      background: var(--bordo);
+      border: 0;
+      border-radius: 12px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .candado button:disabled { opacity: 0.6; cursor: default; }
+
+    .candado-msg {
+      min-height: 1.4em;
+      margin-top: 10px;
+      font-size: 0.9rem;
+      color: var(--bordo);
+    }
+
+    .pistas-hint {
+      margin-top: 18px;
+      font-size: 0.9rem;
+      color: var(--texto-suave);
+      line-height: 1.4;
+    }
+
+    /* ===== 9. Pistas con rascado ===== */
+    /* Sin caja propia: el papel de carta es la única tarjeta de la pista */
+    .pista {
+      margin-top: 18px;
+    }
+
+    .pista[hidden] { display: none; }
+
+    /* Aparece con suavidad cuando se desbloquea */
+    .pista.entra { animation: entrada 0.6s ease both; }
+
+    .pista.found .pista-titulo { color: var(--bordo); }
+
+    .pista-cab {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .pista-titulo {
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .pista-estado {
+      font-size: 0.8rem;
+      color: var(--texto-suave);
+      white-space: nowrap;
+    }
+
+    .pista.found .pista-estado { color: var(--bordo); }
+
+    /* El cuerpo guarda el texto; el canvas lo tapa hasta rascarlo */
+    .pista-cuerpo {
+      position: relative;
+      margin-top: 10px;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .pista-texto {
+      padding: 14px;
+      font-size: 0.95rem;
+      line-height: 1.5;
+      color: var(--bordo-hondo);
+    }
+
+    .rasca {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 14px;
+      touch-action: none;
+      cursor: crosshair;
+      transition: opacity 0.6s ease;
+    }
+
+    .rasca.gone {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .pista-revelar {
+      display: block;
+      margin-top: 10px;
+      min-height: 44px;
+      padding: 0 14px;
+      font: inherit;
+      font-size: 0.9rem;
+      color: var(--bordo);
+      background: transparent;
+      border: 1px solid var(--bordo);
+      border-radius: 12px;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+
+    .pista-revelar[hidden] { display: none; }
+
+    /* ===== 10. Pase VIP (billete pastel) ===== */
+    .ticket {
+      position: relative;
+      margin-top: 8px;
+      padding: 22px 20px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #f4c7c3 0%, #f7d9c4 50%, #ebb5ad 100%);
+      color: var(--bordo-hondo);
+    }
+
+    /* Muescas laterales de billete de embarque */
+    .ticket::before,
+    .ticket::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      margin-top: -11px;
+      border-radius: 50%;
+      background: var(--crema);
+    }
+    .ticket::before { left: -11px; }
+    .ticket::after  { right: -11px; }
+
+    .ticket-title {
+      font-size: 1.1rem;
+      font-weight: 800;
+      text-align: center;
+      padding-bottom: 12px;
+      border-bottom: 2px dashed rgba(74, 18, 32, 0.35);
+    }
+
+    .ticket-rows { margin-top: 6px; }
+
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px dashed rgba(74, 18, 32, 0.3);
+      font-size: 0.95rem;
+    }
+
+    .row:last-child { border-bottom: 0; }
+    .row dt { font-weight: 700; flex-shrink: 0; }
+    .row dd { text-align: right; }
+
+    .qr-bloque {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .qr-caja {
+      padding: 6px;
+      background: var(--crema);
+      border-radius: 12px;
+    }
+
+    .qr-caja img,
+    .qr-caja canvas {
+      display: block;
+      width: 104px;
+      height: 104px;
+    }
+
+    .qr-texto {
+      font-size: 0.8rem;
+      color: var(--bordo-hondo);
+    }
+
+    .gps-note {
+      margin-top: 14px;
+      text-align: center;
+      font-size: 0.85rem;
+      color: var(--texto-suave);
+      line-height: 1.4;
+    }
+
+    /* Momento de autor: el billete se despliega al llegar al paso final */
+    #step-4.active .ticket {
+      animation: desplegar 0.9s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes desplegar {
+      from { opacity: 0; transform: translateY(24px) rotate(-3deg) scale(0.96); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    .final-msg {
+      display: none;
+      margin-top: 18px;
+      text-align: center;
+      font-size: 1.05rem;
+      line-height: 1.5;
+      color: var(--bordo);
+    }
+
+    /* ===== 10b. Progreso, maleta, pasaporte y sellos ===== */
+    .progreso {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+    }
+
+    .progreso span {
+      flex: 1;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(107, 30, 46, 0.15);
+      transition: background 0.4s ease;
+    }
+
+    .progreso span.on { background: var(--bordo); }
+
+    .contador {
+      margin-top: 14px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--bordo);
+    }
+
+    /* Indicador circular de cada objeto de la maleta */
+    .item::after {
+      content: "";
+      flex-shrink: 0;
+      margin-left: auto;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      border: 2px solid var(--bordo);
+      transition: background 0.2s ease;
+    }
+
+    .item[aria-pressed="true"]::after { background: var(--bordo); }
+
+    .pasaporte {
+      margin-top: 22px;
+      padding: 14px;
+      border: 1px solid rgba(107, 30, 46, 0.25);
+      border-radius: 18px;
+      background: var(--melocoton);
+    }
+
+    .sellos {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    /* Hueco donde irá el sello */
+    .sello-hueco {
+      position: relative;
+      display: block;
+      aspect-ratio: 1;
+      border: 2px dashed rgba(107, 30, 46, 0.3);
+      border-radius: 50%;
+    }
+
+    /* El sello aparece con golpe seco al descubrir la pista */
+    .sello {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      fill: none;
+      stroke: var(--bordo);
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: 0;
+      transform: rotate(-12deg);
+    }
+
+    .sello.on {
+      animation: sellar 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+    }
+
+    @keyframes sellar {
+      from { opacity: 0; transform: rotate(-12deg) scale(1.6); }
+      to   { opacity: 1; transform: rotate(-12deg) scale(1); }
+    }
+
+    .ticket .sellos { margin-bottom: 14px; }
+    .ticket .sello { stroke: var(--bordo-hondo); }
+
+    /* ===== 10c. Tipografía de titulares, fotos de pista y mapa ===== */
+    h1, h2, .ticket-title, .finish-msg, .final-msg {
+      font-family: "Fraunces", Georgia, "Times New Roman", serif;
+      font-optical-sizing: auto;
+    }
+
+    h1 { font-size: 1.9rem; line-height: 1.1; font-weight: 800; letter-spacing: -0.015em; }
+    h2 { font-weight: 700; }
+    .lead { font-size: 1.02rem; }
+
+    /* Foto de ella bajo el rascado; el texto va sobre un panel crema */
+
+    .pista-foto {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: 0;
+    }
+
+    /* Papel de carta: crema con líneas suaves y letra inicial grande */
+    .pista-texto {
+      position: relative;
+      z-index: 1;
+      margin: -40px 12px 0;
+      padding: 14px 16px;
+      border: 1px solid rgba(107, 30, 46, 0.2);
+      border-radius: 4px 14px 14px 4px;
+      background-color: var(--crema);
+      background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0 25px,
+        rgba(107, 30, 46, 0.08) 25px 26px
+      );
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.18);
+      font-size: 0.98rem;
+      line-height: 26px;
+      color: var(--bordo-hondo);
+    }
+
+    .pista-texto::first-letter {
+      float: left;
+      margin: 4px 8px 0 0;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 3.2rem;
+      font-weight: 800;
+      line-height: 0.9;
+      color: var(--bordo);
+    }
+
+    /* Marco de la foto: visible siempre; el papel se solapa sobre su borde inferior */
+    .pista-marco {
+      position: relative;
+      aspect-ratio: 4 / 3;
+      background: var(--melocoton);
+      overflow: hidden;
+    }
+
+    /* Icono de cámara mientras no hay archivo de foto */
+    .marco-camara {
+      position: absolute;
+      inset: 0;
+      margin: auto;
+      width: 44px;
+      height: 44px;
+      fill: none;
+      stroke: var(--bordo);
+      stroke-width: 1.6;
+      stroke-linejoin: round;
+      opacity: 0.6;
+    }
+
+    .rasca { z-index: 2; }
+
+    .mapa {
+      height: 220px;
+      margin-top: 14px;
+      border: 1px solid var(--bordo);
+      border-radius: 18px;
+      overflow: hidden;
+    }
+
+    /* ===== 10d. Insignia al rascar una pista ===== */
+    .insignia {
+      position: fixed;
+      inset: 0;
+      z-index: 10;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+      background: rgba(74, 18, 32, 0.72);
+    }
+
+    .insignia[hidden] { display: none; }
+
+    .insignia-tarjeta {
+      width: 100%;
+      max-width: 320px;
+      padding: 28px 22px 22px;
+      text-align: center;
+      background: var(--crema);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+      animation: subirInsignia 0.6s cubic-bezier(0.2, 1.3, 0.4, 1) both;
+    }
+
+    .insignia-medalla {
+      display: block;
+      width: 104px;
+      height: 104px;
+      margin: 0 auto;
+      animation: girarMedalla 1s cubic-bezier(0.2, 1, 0.3, 1) 0.15s both;
+    }
+
+    .insignia-medalla .disco { fill: var(--melocoton); stroke: var(--bordo); stroke-width: 3; }
+    .insignia-medalla .glifo {
+      fill: none;
+      stroke: var(--bordo-hondo);
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .insignia-aviso {
+      margin-top: 14px;
+      font-size: 0.95rem;
+      color: var(--texto-suave);
+    }
+
+    .insignia-titulo {
+      margin-top: 6px;
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--bordo);
+    }
+
+    .insignia-seguir { margin-top: 18px; }
+
+    @keyframes subirInsignia {
+      from { opacity: 0; transform: translateY(24px) scale(0.92); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    @keyframes girarMedalla {
+      from { opacity: 0; transform: rotate(-200deg) scale(0.4); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ===== 10e. Panel de carga de fotos (solo con ?fotos en la URL) ===== */
+    .panel-fotos {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 20;
+      max-height: 55vh;
+      overflow-y: auto;
+      padding: 16px;
+      background: var(--bordo-hondo);
+      color: var(--crema);
+      box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    .panel-fotos[hidden] { display: none; }
+
+    .panel-fotos h2 {
+      font-size: 1.2rem;
+      margin-bottom: 4px;
+    }
+
+    .panel-fotos p {
+      font-size: 0.85rem;
+      color: var(--rosa);
+      margin-bottom: 10px;
+    }
+
+    .foto-fila {
+      display: grid;
+      grid-template-columns: 56px 1fr;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 0;
+      border-top: 1px solid rgba(244, 199, 195, 0.2);
+    }
+
+    .foto-fila img {
+      width: 56px;
+      height: 56px;
+      object-fit: cover;
+      border-radius: 10px;
+      background: var(--bordo);
+    }
+
+    /* Sin foto cargada, la vista previa no ocupa columna */
+    .foto-fila img[hidden] { display: none; }
+
+    .foto-fila:has(img[hidden]) { grid-template-columns: 1fr; }
+
+    .foto-fila label {
+      display: block;
+      font-weight: 700;
+      font-size: 0.95rem;
+    }
+
+    .gh-config {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(244, 199, 195, 0.08);
+    }
+
+    .gh-config[hidden] { display: none; }
+
+    .gh-config label {
+      display: grid;
+      gap: 4px;
+      font-size: 0.85rem;
+    }
+
+    .gh-config input {
+      min-height: 44px;
+      padding: 0 10px;
+      font: inherit;
+      font-size: 1rem; /* 16px: sin zoom en iOS */
+      color: var(--bordo-hondo);
+      background: var(--crema);
+      border: 1px solid var(--rosa);
+      border-radius: 10px;
+    }
+
+    .gh-config > button,
+    .gh-resumen button {
+      min-height: 44px;
+      padding: 0 14px;
+      font: inherit;
+      font-weight: 700;
+      color: var(--bordo-hondo);
+      background: var(--rosa);
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .gh-resumen {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 0.85rem;
+    }
+
+    .gh-resumen[hidden] { display: none; }
+
+    .foto-estado {
+      display: block;
+      margin-top: 2px;
+      font-size: 0.8rem;
+      color: var(--rosa);
+    }
+
+    .foto-estado[data-estado="falta"] {
+      color: var(--melocoton);
+      font-weight: 700;
+    }
+
+    .foto-fila input[type="file"] {
+      display: block;
+      width: 100%;
+      margin-top: 6px;
+      font: inherit;
+      font-size: 0.85rem;
+      color: var(--crema);
+    }
+
+    .foto-fila button {
+      margin-top: 6px;
+      min-height: 40px;
+      padding: 0 12px;
+      font: inherit;
+      font-size: 0.9rem;
+      color: var(--bordo-hondo);
+      background: var(--rosa);
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .foto-fila button:disabled { opacity: 0.5; cursor: default; }
+
+    .foto-fila input[type="file"]:focus-visible,
+    .foto-fila button:focus-visible {
+      outline: 3px solid var(--rosa);
+      outline-offset: 2px;
+    }
+
+    /* ===== 11. Ajustes móviles ===== */
+    @media (max-width: 360px) {
+      .app { padding: 22px 16px; }
+      .timer { gap: 6px; }
+      .unit b { font-size: 1.3rem; }
+    }
+
+    /* Respeta a quien tiene activada la reducción de movimiento */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Iconos de las insignias (símbolos reutilizables; se muestran en el modal) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="ins-rumbo" viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="18"/>
+      <path d="M24 10l4 14-4 14-4-14z"/>
+    </symbol>
+    <symbol id="ins-destino" viewBox="0 0 48 48">
+      <path d="M4 20c4-4 8-4 12 0s8 4 12 0 8-4 12 0M4 30c4-4 8-4 12 0s8 4 12 0 8-4 12 0"/>
+    </symbol>
+    <symbol id="ins-vuelta" viewBox="0 0 48 48">
+      <path d="M30 8a18 18 0 1 0 10 28 14 14 0 1 1-10-28z"/>
+    </symbol>
+    <symbol id="ins-manana" viewBox="0 0 48 48">
+      <ellipse cx="24" cy="30" rx="8" ry="7"/>
+      <circle cx="12" cy="18" r="3.5"/>
+      <circle cx="20" cy="12" r="3.5"/>
+      <circle cx="28" cy="12" r="3.5"/>
+      <circle cx="36" cy="18" r="3.5"/>
+    </symbol>
+    <symbol id="ins-tarde" viewBox="0 0 48 48">
+      <path d="M6 34h36M12 34a12 12 0 0 1 24 0M24 10v6M10 18l4 4M38 18l-4 4"/>
+    </symbol>
+  </svg>
+
+  <main class="app">
+    <nav class="progreso" aria-hidden="true">
+      <span></span><span></span><span></span><span></span>
+    </nav>
+
+    <!-- ===== FASE 1: Portada y cuenta atrás ===== -->
+    <section class="step active" id="step-1">
+      <span class="badge">Enna · 30 Años</span>
+      <h1>Amorcito, estos 30 años serán especiales</h1>
+      <p class="lead">
+        En breve, una travesía de pistas y sorpresas te llevará a un destino secreto.
+      </p>
+
+      <div class="timer" id="timer" aria-live="polite">
+        <div class="unit"><b id="dias">00</b><span>Días</span></div>
+        <div class="unit"><b id="horas">00</b><span>Horas</span></div>
+        <div class="unit"><b id="minutos">00</b><span>Minutos</span></div>
+        <div class="unit"><b id="segundos">00</b><span>Segundos</span></div>
+      </div>
+
+      <p class="finish-msg" id="finish-msg">¡Es la hora de arrancar! 🚗💨</p>
+
+      <button class="btn" id="btn-abrir" type="button" disabled>Se abre a las 00:00:00</button>
+    </section>
+
+    <!-- ===== FASE 2: Preparativos de la maleta ===== -->
+    <section class="step" id="step-2">
+      <h1>Antes de partir</h1>
+      <p class="lead">
+        Cinco tareas antes de saber adónde vamos. Tócalas a medida que
+        las cumples.
+      </p>
+      <p class="contador" id="contador" aria-live="polite">Llevas 0 de 5</p>
+
+      <button class="item" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="7" y="3" width="10" height="18" rx="2"/>
+          <path d="M11 18h2"/>
+        </svg>
+        <span>Liberar espacio de memoria en el teléfono</span>
+      </button>
+
+      <button class="item" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="4" y="7" width="16" height="13" rx="2"/>
+          <path d="M9 7V5h6v2M4 12h16"/>
+        </svg>
+        <span>Hacer la maleta: ropa deportiva y ropa cómoda</span>
+      </button>
+
+      <button class="item" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M9 18V6l10-2v12"/>
+          <circle cx="6" cy="18" r="3"/>
+          <circle cx="16" cy="16" r="3"/>
+        </svg>
+        <span>Armar una playlist de música</span>
+      </button>
+
+      <button class="item" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 20s-7-4.5-7-10a4 4 0 0 1 7-2.5A4 4 0 0 1 19 10c0 5.5-7 10-7 10z"/>
+        </svg>
+        <span>Confiar</span>
+      </button>
+
+      <button class="item" type="button" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="12" cy="12" r="4"/>
+          <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>
+        </svg>
+        <span>Ganas de pasarla bien</span>
+      </button>
+
+      <button class="btn" id="btn-maleta" type="button">Siguiente</button>
+    </section>
+
+    <!-- ===== FASE 3: Candado y pistas rascables ===== -->
+    <section class="step" id="step-3">
+      <h1>El destino se rasca</h1>
+
+      <!-- Candado: la clave es la edad que cumple -->
+      <form class="candado" id="form-candado">
+        <label for="edad">Antes de las pistas, un candado. ¿Cuántos años cumples?</label>
+        <div class="candado-fila">
+          <input id="edad" type="number" inputmode="numeric" min="0" max="120" autocomplete="off" required>
+          <button id="btn-candado" type="submit">Abrir</button>
+        </div>
+        <p class="candado-msg" id="candado-msg" aria-live="polite"></p>
+      </form>
+
+      <p class="pistas-hint" id="nota-pistas">
+        Rasca cada pista en orden. Cada una abre la siguiente.
+      </p>
+
+      <!-- Pasaporte: cada pista descubierta estampa su sello -->
+      <div class="pasaporte" aria-hidden="true">
+        <div class="sellos">
+          <span class="sello-hueco"><svg class="sello" data-sello="0" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M24 10l4 14-4 14-4-14z"/></svg></span>
+          <span class="sello-hueco"><svg class="sello" data-sello="1" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M8 28c4-4 8-4 12 0s8 4 12 0 8-4 8 0M8 34c4-4 8-4 12 0s8 4 12 0"/></svg></span>
+          <span class="sello-hueco"><svg class="sello" data-sello="2" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M30 12a14 14 0 1 0 6 22 11 11 0 1 1-6-22z"/></svg></span>
+          <span class="sello-hueco"><svg class="sello" data-sello="3" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M16 34c4-14 12-20 20-20-2 8-8 16-20 20zM16 34l10-10"/></svg></span>
+          <span class="sello-hueco"><svg class="sello" data-sello="4" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><circle cx="24" cy="24" r="8"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6"/></svg></span>
+        </div>
+      </div>
+
+      <!-- Pista 1: el rumbo -->
+      <article class="pista" hidden data-insignia="El rumbo" data-icono="rumbo" data-foto="1">
+        <div class="pista-cab">
+          <h2 class="pista-titulo">El rumbo</h2>
+          <span class="pista-estado">Rasca para revelar</span>
+        </div>
+        <div class="pista-cuerpo">
+          <div class="pista-marco">
+            <svg class="marco-camara" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8h3l2-3h6l2 3h3v11H4z"/>
+              <circle cx="12" cy="13" r="3.5"/>
+            </svg>
+          </div>
+          <p class="pista-texto">
+            Salimos de Bilbao rumbo al oeste, bordeando el Cantábrico
+            durante unas 3 horas. Ponte cómoda: la carretera tiene vistas.
+          </p>
+          <canvas class="rasca" aria-hidden="true"></canvas>
+        </div>
+        <button class="pista-revelar" type="button">Revelar sin rascar</button>
+      </article>
+
+      <!-- Pista 2: el destino -->
+      <article class="pista" hidden data-insignia="El destino" data-icono="destino" data-foto="2">
+        <div class="pista-cab">
+          <h2 class="pista-titulo">El destino</h2>
+          <span class="pista-estado">Rasca para revelar</span>
+        </div>
+        <div class="pista-cuerpo">
+          <div class="pista-marco">
+            <svg class="marco-camara" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8h3l2-3h6l2 3h3v11H4z"/>
+              <circle cx="12" cy="13" r="3.5"/>
+            </svg>
+          </div>
+          <p class="pista-texto">
+            Tierra de sidra y mar bravo, con un paseo marítimo infinito y una
+            gran escalera al cielo: el Elogio del Horizonte. Caminaremos su
+            casco viejo, miraremos el mar y comeremos algo rico.
+          </p>
+          <canvas class="rasca" aria-hidden="true"></canvas>
+        </div>
+        <button class="pista-revelar" type="button">Revelar sin rascar</button>
+      </article>
+
+      <!-- Pista 3: la vuelta -->
+      <article class="pista" hidden data-insignia="La vuelta" data-icono="vuelta" data-foto="3">
+        <div class="pista-cab">
+          <h2 class="pista-titulo">La vuelta</h2>
+          <span class="pista-estado">Rasca para revelar</span>
+        </div>
+        <div class="pista-cuerpo">
+          <div class="pista-marco">
+            <svg class="marco-camara" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8h3l2-3h6l2 3h3v11H4z"/>
+              <circle cx="12" cy="13" r="3.5"/>
+            </svg>
+          </div>
+          <p class="pista-texto">
+            Cuando caiga la noche, desharemos el camino hacia Santander.
+            Lleva el jersey: junto al mar refresca.
+          </p>
+          <canvas class="rasca" aria-hidden="true"></canvas>
+        </div>
+        <button class="pista-revelar" type="button">Revelar sin rascar</button>
+      </article>
+
+      <!-- Pista 4: la mañana del día de cumpleaños -->
+      <article class="pista" hidden data-insignia="La mañana" data-icono="manana" data-foto="4">
+        <div class="pista-cab">
+          <h2 class="pista-titulo">La mañana</h2>
+          <span class="pista-estado">Rasca para revelar</span>
+        </div>
+        <div class="pista-cuerpo">
+          <div class="pista-marco">
+            <svg class="marco-camara" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8h3l2-3h6l2 3h3v11H4z"/>
+              <circle cx="12" cy="13" r="3.5"/>
+            </svg>
+          </div>
+          <p class="pista-texto">
+            Al día siguiente no estaremos solos: nos esperan rugidos, plumas
+            y especies de los cinco continentes. Prepara la cámara.
+          </p>
+          <canvas class="rasca" aria-hidden="true"></canvas>
+        </div>
+        <button class="pista-revelar" type="button">Revelar sin rascar</button>
+      </article>
+
+      <!-- Pista 5: la tarde, de vuelta a Santander -->
+      <article class="pista" hidden data-insignia="La tarde" data-icono="tarde" data-foto="4">
+        <div class="pista-cab">
+          <h2 class="pista-titulo">La tarde</h2>
+          <span class="pista-estado">Rasca para revelar</span>
+        </div>
+        <div class="pista-cuerpo">
+          <div class="pista-marco">
+            <svg class="marco-camara" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 8h3l2-3h6l2 3h3v11H4z"/>
+              <circle cx="12" cy="13" r="3.5"/>
+            </svg>
+          </div>
+          <p class="pista-texto">
+            Cuando el día se apague, paseo de vuelta a Santander, con la
+            cámara llena y los pies cansados de tanto reír.
+          </p>
+          <canvas class="rasca" aria-hidden="true"></canvas>
+        </div>
+        <button class="pista-revelar" type="button">Revelar sin rascar</button>
+      </article>
+
+      <button class="btn" id="btn-pase" type="button" hidden>Ver mi Pase VIP</button>
+    </section>
+
+    <!-- ===== FASE 4: Pase VIP final ===== -->
+    <section class="step" id="step-4">
+      <div class="ticket">
+        <h2 class="ticket-title">🎟️ PASE VIP · ENNA 30</h2>
+        <dl class="ticket-rows">
+          <div class="row"><dt>Origen</dt><dd>Bilbao</dd></div>
+          <div class="row"><dt>Destino</dt><dd>¡Sorpresa en la costa!</dd></div>
+          <div class="row"><dt>Fecha</dt><dd id="fecha-fin"></dd></div>
+          <div class="row">
+            <dt>Qué llevar</dt>
+            <dd>Calzado cómodo para caminar mucho, algo de abrigo para la brisa del mar y muchas ganas.</dd>
+          </div>
+        </dl>
+
+        <div class="sellos" aria-hidden="true">
+          <span class="sello-hueco"><svg class="sello" data-sello="0" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M24 10l4 14-4 14-4-14z"/></svg></span>
+          <span class="sello-hueco"><svg class="sello" data-sello="1" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M8 28c4-4 8-4 12 0s8 4 12 0 8-4 8 0M8 34c4-4 8-4 12 0s8 4 12 0"/></svg></span>
+          <span class="sello-hueco"><svg class="sello" data-sello="2" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M30 12a14 14 0 1 0 6 22 11 11 0 1 1-6-22z"/></svg></span>
+          <span class="sello-hueco"><svg class="sello" data-sello="3" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M16 34c4-14 12-20 20-20-2 8-8 16-20 20zM16 34l10-10"/></svg></span>
+          <span class="sello-hueco"><svg class="sello" data-sello="4" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><circle cx="24" cy="24" r="8"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6"/></svg></span>
+        </div>
+
+        <div class="qr-bloque">
+          <div class="qr-caja" id="qr" role="img" aria-label="Código QR que abre una foto vuestra"></div>
+          <p class="qr-texto">Escanea para ver una foto nuestra</p>
+        </div>
+      </div>
+
+      <div class="mapa" id="mapa" role="img" aria-label="Mapa con las ubicaciones del fin de semana"></div>
+
+      <p class="gps-note">
+        El destino exacto en el GPS se desbloqueará al arrancar el coche.
+      </p>
+
+      <button class="btn" id="btn-confirmar" type="button">Confirmar asistencia</button>
+
+      <p class="final-msg" id="final-msg">
+        Enna, has cumplido 30 y no hay mejor forma de celebrarlo que
+        un fin de semana contigo. Te amo siempre. ¡Feliz cumpleaños! 🥳
+      </p>
+    </section>
+
+  </main>
+
+  <!-- Panel de carga de fotos: solo visible con ?fotos en la URL -->
+  <section class="panel-fotos" id="panel-fotos" aria-labelledby="panel-fotos-titulo" hidden>
+    <h2 id="panel-fotos-titulo">Cargar fotos</h2>
+    <p>Elige una foto por pista y descárgala. Luego copia el archivo a la carpeta del proyecto y recarga la página; aquí verás si ya está.</p>
+    <!-- Conexión con GitHub: el token se guarda solo en esta pestaña -->
+    <form class="gh-config" id="gh-config" hidden>
+      <label>Usuario de GitHub <input id="gh-usuario" autocomplete="off" required></label>
+      <label>Nombre del repositorio <input id="gh-repo" autocomplete="off" required></label>
+      <label>Token de GitHub (solo esta pestaña) <input id="gh-token" type="password" autocomplete="off" required></label>
+      <button type="submit">Guardar conexión</button>
+    </form>
+    <div class="gh-resumen" id="gh-resumen" hidden>
+      <span id="gh-resumen-texto"></span>
+      <button type="button" id="gh-cambiar">Cambiar</button>
+    </div>
+    <div id="filas-foto"></div>
+  </section>
+
+  <!-- Insignia: aparece al rascar cada pista -->
+  <div class="insignia" id="insignia" role="dialog" aria-modal="true" aria-labelledby="insignia-titulo" hidden>
+    <div class="insignia-tarjeta">
+      <svg class="insignia-medalla" viewBox="0 0 96 96" aria-hidden="true">
+        <circle class="disco" cx="48" cy="48" r="40"/>
+        <use class="glifo" id="insignia-glifo" href="#ins-rumbo" x="24" y="24" width="48" height="48"/>
+      </svg>
+      <p class="insignia-aviso">Has obtenido una nueva insignia</p>
+      <h2 class="insignia-titulo" id="insignia-titulo"></h2>
+      <button class="btn insignia-seguir" type="button">Seguir</button>
+    </div>
+  </div>
+
+  <!-- Librerías externas (CDN): confeti y código QR -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+  <script>
+    /* ==========================================================
+       CONFIGURACIÓN
+       Fecha y hora de salida para la cuenta atrás (hora local del móvil).
+       Formato: 'AAAA-MM-DDTHH:MM:SS'
+       Ejemplo: '2027-01-15T09:00:00' = 15 de enero de 2027 a las 09:00.
+       Para cambiarla, edita solo la cadena de dentro de las comillas.
+       ========================================================== */
+    const targetDate = new Date('2026-10-21T09:00:00');
+
+    // Respuesta del candado: la edad que cumple
+    const CODIGO_CANDADO = '30';
+
+    // Foto que abre el QR del pase. Debe estar en la misma carpeta que index.html
+    const RUTA_FOTO = 'foto.jpg';
+
+    // Fecha del fin de semana: sábado (targetDate) y domingo siguiente, en el pase
+    const formatoFecha = (d) => d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+    const domingo = new Date(targetDate);
+    domingo.setDate(domingo.getDate() + 1);
+    document.getElementById('fecha-fin').textContent = `${formatoFecha(targetDate)} y ${formatoFecha(domingo)}`;
+
+    /* ===== Utilidades ===== */
+
+    // Añade un cero a la izquierda si el número tiene una sola cifra
+    const pad = (n) => String(n).padStart(2, '0');
+
+    // Lanza confeti si la librería ha cargado; si no, la web sigue funcionando
+    function lanzarConfeti(opciones = {}) {
+      if (typeof confetti !== 'function') return;
+      confetti({
+        particleCount: 90,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#6b1e2e', '#f4c7c3', '#f7d9c4', '#fbf1ea'],
+        ...opciones
+      });
+    }
+
+    // Doble ráfaga desde ambos lados de la pantalla
+    function rafagaDoble() {
+      lanzarConfeti({ angle: 60, origin: { x: 0, y: 0.7 } });
+      setTimeout(() => lanzarConfeti({ angle: 120, origin: { x: 1, y: 0.7 } }), 250);
+    }
+
+    /* ===== Navegación entre fases ===== */
+
+    // Muestra solo la fase indicada (1, 2, 3 o 4)
+    function irAPaso(n) {
+      document.querySelectorAll('.step').forEach((paso) => {
+        paso.classList.toggle('active', paso.id === `step-${n}`);
+      });
+      // La barra de progreso marca las fases ya recorridas
+      document.querySelectorAll('.progreso span').forEach((barra, i) => {
+        barra.classList.toggle('on', i < n);
+      });
+      // El mapa aparece solo en el pase final
+      if (n === 4) mostrarMapa();
+    }
+
+    /* ===== Mapa de ubicaciones (solo en el pase) ===== */
+
+    let mapa = null;
+
+    function mostrarMapa() {
+      if (typeof L === 'undefined') return;
+      if (mapa) { mapa.invalidateSize(); return; }
+
+      mapa = L.map('mapa', { scrollWheelZoom: false, zoomControl: false });
+      L.control.zoom({ position: 'bottomright' }).addTo(mapa);
+      // Mapa de calles de Esri: sin clave y con atribución
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        attribution: 'Tiles © Esri'
+      }).addTo(mapa);
+
+      // Puntos del viaje. Añade el punto del domingo cuando tengas sus coordenadas.
+      const puntos = [
+        { nombre: 'Bilbao', coords: [43.263, -2.935] },
+        { nombre: 'Gijón', coords: [43.5322, -5.6611] },
+        { nombre: 'Santander', coords: [43.4623, -3.8099] }
+      ];
+
+      const trazo = puntos.map((p) => p.coords);
+      L.polyline(trazo, { color: '#6b1e2e', weight: 3, dashArray: '6 8' }).addTo(mapa);
+
+      puntos.forEach((p) => {
+        L.circleMarker(p.coords, {
+          radius: 9, color: '#6b1e2e', weight: 3, fillColor: '#f4c7c3', fillOpacity: 1
+        })
+          .bindTooltip(p.nombre, { permanent: true, direction: 'top', className: 'mapa-etiqueta' })
+          .addTo(mapa);
+      });
+
+      mapa.fitBounds(trazo, { padding: [28, 28] });
+    }
+
+    /* ===== Cuenta atrás ===== */
+
+    // Actualiza el reloj. Devuelve true mientras falte tiempo.
+    function actualizarCuentaAtras() {
+      const diff = targetDate - new Date();
+
+      if (diff <= 0) {
+        document.getElementById('timer').style.display = 'none';
+        document.getElementById('finish-msg').style.display = 'block';
+        // Al llegar a 00:00:00 (o si ya había pasado) se habilita el inicio del regalo
+        const botonAbrir = document.getElementById('btn-abrir');
+        botonAbrir.disabled = false;
+        botonAbrir.textContent = 'Abrir mi regalo';
+        return false;
+      }
+
+      const totalSeg = Math.floor(diff / 1000);
+      document.getElementById('dias').textContent = pad(Math.floor(totalSeg / 86400));
+      document.getElementById('horas').textContent = pad(Math.floor((totalSeg % 86400) / 3600));
+      document.getElementById('minutos').textContent = pad(Math.floor((totalSeg % 3600) / 60));
+      document.getElementById('segundos').textContent = pad(totalSeg % 60);
+      return true;
+    }
+
+    // Primera pasada inmediata y, si aún no ha llegado la fecha, refresco cada segundo
+    if (actualizarCuentaAtras()) {
+      const idIntervalo = setInterval(() => {
+        if (!actualizarCuentaAtras()) clearInterval(idIntervalo);
+      }, 1000);
+    }
+
+    /* ===== Fase 2: maleta ===== */
+
+    // Cuenta los objetos marcados en la maleta
+    function actualizarContador() {
+      const marcados = document.querySelectorAll('.item[aria-pressed="true"]').length;
+      const total = document.querySelectorAll('.item').length;
+      document.getElementById('contador').textContent =
+        marcados === total ? 'Todo listo' : `Llevas ${marcados} de ${total}`;
+    }
+
+    // Cada objeto se marca al tocarlo
+    document.querySelectorAll('.item').forEach((objeto) => {
+      objeto.addEventListener('click', () => {
+        const marcado = objeto.getAttribute('aria-pressed') === 'true';
+        objeto.setAttribute('aria-pressed', String(!marcado));
+        actualizarContador();
+      });
+    });
+
+    /* ===== Fase 3: candado y pistas ===== */
+
+    const pistas = [...document.querySelectorAll('.pista')];
+
+    // Prepara el lienzo de rascado con una capa gris y el aviso
+    function prepararRasca(canvas) {
+      const ctx = canvas.getContext('2d');
+      const ancho = canvas.clientWidth;
+      const alto = canvas.clientHeight;
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
+      canvas.width = ancho * dpr;
+      canvas.height = alto * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      ctx.fillStyle = '#d8b9b3';
+      ctx.fillRect(0, 0, ancho, alto);
+
+      ctx.fillStyle = '#6b1e2e';
+      ctx.font = '600 14px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('✦ rasca aquí ✦', ancho / 2, alto / 2);
+    }
+
+    // Fracción de la capa ya borrada (muestreo de 1 de cada 4 píxeles)
+    function progresoBorrado(canvas) {
+      const ctx = canvas.getContext('2d');
+      const datos = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      let transparentes = 0;
+      let total = 0;
+      for (let i = 3; i < datos.length; i += 16) {
+        total++;
+        if (datos[i] === 0) transparentes++;
+      }
+      return transparentes / total;
+    }
+
+    // Descubre una pista y desbloquea la siguiente; tras la última aparece el pase
+    function descubrir(indice) {
+      const pista = pistas[indice];
+      if (pista.classList.contains('found')) return;
+
+      pista.classList.add('found');
+      pista.querySelector('.pista-estado').textContent = '✓ Descubierta';
+      pista.querySelector('.rasca').classList.add('gone');
+      pista.querySelector('.pista-revelar').hidden = true;
+      // Estampa el sello de esta pista en el pasaporte y en el pase
+      document.querySelectorAll(`[data-sello="${indice}"]`).forEach((sello) => sello.classList.add('on'));
+
+      // La insignia se muestra primero; la siguiente pista aparece al tocar "Seguir"
+      mostrarInsignia(pista.dataset.insignia, pista.dataset.icono, () => {
+        if (pistas[indice + 1]) {
+          desbloquear(indice + 1);
+          document.getElementById('nota-pistas').textContent = 'Sigue con la siguiente pista.';
+        } else {
+          document.getElementById('nota-pistas').textContent = 'Ya tienes las cinco. Solo falta el pase.';
+          document.getElementById('btn-pase').hidden = false;
+        }
+      });
+    }
+
+    // Insignia al descubrir una pista; alSeguir continúa cuando la toca
+    function mostrarInsignia(nombre, icono, alSeguir) {
+      const overlay = document.getElementById('insignia');
+      const boton = overlay.querySelector('.insignia-seguir');
+      document.getElementById('insignia-titulo').textContent = nombre;
+      // Cada logro muestra su propio icono dentro de la medalla
+      document.getElementById('insignia-glifo').setAttribute('href', `#ins-${icono}`);
+      overlay.hidden = false;
+      lanzarConfeti({ particleCount: 60, spread: 90, origin: { y: 0.45 } });
+      boton.focus();
+
+      const cerrar = () => {
+        overlay.hidden = true;
+        boton.removeEventListener('click', cerrar);
+        alSeguir();
+      };
+      boton.addEventListener('click', cerrar);
+    }
+
+    // Muestra una pista y activa su rascado (se llama una sola vez por pista)
+    function desbloquear(indice) {
+      const pista = pistas[indice];
+      const canvas = pista.querySelector('.rasca');
+
+      // Foto de ella para esta pista; si el archivo no existe, queda el tono de respaldo
+      const foto = document.createElement('img');
+      foto.className = 'pista-foto';
+      foto.alt = 'Foto de Enna';
+      foto.src = `foto-pista-${pista.dataset.foto}.jpg`;
+      foto.onerror = () => foto.remove();
+      pista.querySelector('.pista-marco').prepend(foto);
+
+      pista.hidden = false;
+      pista.classList.add('entra');
+      prepararRasca(canvas);
+      activarRasca(canvas, indice);
+      pista.querySelector('.pista-revelar').addEventListener('click', () => descubrir(indice));
+    }
+
+    // Rascado con ratón o dedo (pointer events)
+    function activarRasca(canvas, indice) {
+      const ctx = canvas.getContext('2d');
+      let ultimo = null;
+
+      const posicion = (e) => {
+        const r = canvas.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      };
+
+      const borrarTrazo = (desde, hasta) => {
+        ctx.globalCompositeOperation = 'destination-out';
+        ctx.lineWidth = 40;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(desde.x, desde.y);
+        ctx.lineTo(hasta.x, hasta.y);
+        ctx.stroke();
+      };
+
+      canvas.addEventListener('pointerdown', (e) => {
+        canvas.setPointerCapture(e.pointerId);
+        ultimo = posicion(e);
+        borrarTrazo(ultimo, ultimo);
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (!ultimo) return;
+        const actual = posicion(e);
+        borrarTrazo(ultimo, actual);
+        ultimo = actual;
+      });
+
+      const terminar = () => {
+        if (!ultimo) return;
+        ultimo = null;
+        if (progresoBorrado(canvas) > 0.5) descubrir(indice);
+      };
+
+      canvas.addEventListener('pointerup', terminar);
+      canvas.addEventListener('pointercancel', terminar);
+    }
+
+    // Candado: solo avanza con la respuesta correcta
+    document.getElementById('form-candado').addEventListener('submit', (e) => {
+      e.preventDefault();
+      const input = document.getElementById('edad');
+      const mensaje = document.getElementById('candado-msg');
+
+      if (input.value.trim() === CODIGO_CANDADO) {
+        input.disabled = true;
+        document.getElementById('btn-candado').disabled = true;
+        mensaje.textContent = 'Candado abierto. Rasca la primera pista.';
+        desbloquear(0);
+      } else {
+        mensaje.textContent = 'No es ese número. Piensa en la edad de la festejada.';
+        input.select();
+      }
+    });
+
+    /* ===== Panel de carga de fotos (solo con ?fotos) ===== */
+
+    // Una fila por foto. "La tarde" comparte la foto 4, así que no tiene fila propia.
+    const FILAS_FOTO = [
+      { n: 1, etiqueta: 'El rumbo' },
+      { n: 2, etiqueta: 'El destino' },
+      { n: 3, etiqueta: 'La vuelta' },
+      { n: 4, etiqueta: 'La mañana y La tarde' }
+    ];
+
+    // Reduce la imagen a 1280 px de lado largo y la devuelve como JPEG
+    function redimensionarFoto(archivo, lado = 1280) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(archivo);
+        img.onload = () => {
+          const escala = Math.min(1, lado / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.round(img.width * escala);
+          canvas.height = Math.round(img.height * escala);
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          URL.revokeObjectURL(url);
+          canvas.toBlob(
+            (blob) => (blob ? resolve(blob) : reject(new Error('No se pudo convertir la foto'))),
+            'image/jpeg',
+            0.85
+          );
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('El archivo no es una imagen válida'));
+        };
+        img.src = url;
+      });
+    }
+
+    // Indica si foto-pista-N.jpg ya está en la carpeta. Se usa una imagen y no fetch,
+    // porque fetch no funciona con archivos abiertos desde el disco (file://).
+    function comprobarFoto(n, estado) {
+      const sonda = new Image();
+      sonda.onload = () => {
+        estado.textContent = 'Lista en la carpeta';
+        estado.dataset.estado = 'lista';
+      };
+      sonda.onerror = () => {
+        estado.textContent = 'Falta: copia el archivo a la carpeta del proyecto';
+        estado.dataset.estado = 'falta';
+      };
+      sonda.src = `foto-pista-${n}.jpg`;
+    }
+
+    // Construye el panel: selector, vista previa y botón de descarga por cada foto
+    function construirPanelFotos() {
+      const contenedor = document.getElementById('filas-foto');
+
+      FILAS_FOTO.forEach(({ n, etiqueta }) => {
+        const fila = document.createElement('div');
+        fila.className = 'foto-fila';
+        fila.innerHTML = `
+          <img alt="Vista previa de la foto ${n}" hidden>
+          <div>
+            <label>${etiqueta} <span>· foto-pista-${n}.jpg</span></label>
+            <span class="foto-estado">Comprobando…</span>
+            <input type="file" accept="image/*">
+            <button type="button" disabled>Descargar foto-pista-${n}.jpg</button>
+            <button type="button" class="subir" disabled>Subir a GitHub</button>
+          </div>`;
+
+        comprobarFoto(n, fila.querySelector('.foto-estado'));
+
+        const entrada = fila.querySelector('input');
+        const vista = fila.querySelector('img');
+        const boton = fila.querySelector('button');
+        const botonSubir = fila.querySelector('.subir');
+        const estado = fila.querySelector('.foto-estado');
+        let blobListo = null;
+
+        entrada.addEventListener('change', async () => {
+          const archivo = entrada.files[0];
+          if (!archivo) return;
+          try {
+            blobListo = await redimensionarFoto(archivo);
+            vista.src = URL.createObjectURL(blobListo);
+            vista.hidden = false;
+            boton.disabled = false;
+            botonSubir.disabled = false;
+          } catch (error) {
+            blobListo = null;
+            boton.disabled = true;
+            botonSubir.disabled = true;
+            vista.hidden = true;
+            alert(error.message);
+          }
+        });
+
+        boton.addEventListener('click', () => {
+          if (!blobListo) return;
+          const enlace = document.createElement('a');
+          enlace.href = URL.createObjectURL(blobListo);
+          enlace.download = `foto-pista-${n}.jpg`;
+          enlace.click();
+          URL.revokeObjectURL(enlace.href);
+        });
+
+        botonSubir.addEventListener('click', async () => {
+          if (!blobListo) return;
+          if (!leerRepo() || !leerToken()) {
+            mostrarConfigGitHub();
+            return;
+          }
+          const textoOriginal = botonSubir.textContent;
+          botonSubir.disabled = true;
+          botonSubir.textContent = 'Subiendo…';
+          try {
+            await subirAGitHub(n, blobListo);
+            estado.textContent = 'Subida a GitHub. Aparecerá en la web en 1 o 2 minutos.';
+            estado.dataset.estado = 'lista';
+          } catch (error) {
+            estado.textContent = `Error: ${error.message}`;
+            estado.dataset.estado = 'falta';
+          } finally {
+            botonSubir.disabled = false;
+            botonSubir.textContent = textoOriginal;
+          }
+        });
+
+        contenedor.appendChild(fila);
+      });
+    }
+
+    /* ----- Conexión con GitHub -----
+       El usuario y el repositorio se guardan en localStorage (no son secretos).
+       El token solo en sessionStorage: se borra al cerrar la pestaña. Nunca va en el código. */
+    const CLAVE_REPO = 'enna-github-repo';
+    const CLAVE_TOKEN = 'enna-github-token';
+
+    function leerRepo() {
+      try {
+        return JSON.parse(localStorage.getItem(CLAVE_REPO));
+      } catch {
+        return null;
+      }
+    }
+
+    function leerToken() {
+      try {
+        return sessionStorage.getItem(CLAVE_TOKEN);
+      } catch {
+        return null;
+      }
+    }
+
+    // Muestra el formulario, o solo el resumen si ya hay usuario, repositorio y token
+    function actualizarConfigGitHub() {
+      const repo = leerRepo();
+      const formulario = document.getElementById('gh-config');
+      const resumen = document.getElementById('gh-resumen');
+
+      if (repo && leerToken()) {
+        formulario.hidden = true;
+        resumen.hidden = false;
+        document.getElementById('gh-resumen-texto').textContent =
+          `Subiendo a ${repo.usuario}/${repo.repo}`;
+      } else {
+        formulario.hidden = false;
+        resumen.hidden = true;
+        if (repo) {
+          document.getElementById('gh-usuario').value = repo.usuario;
+          document.getElementById('gh-repo').value = repo.repo;
+        }
+      }
+    }
+
+    function mostrarConfigGitHub() {
+      document.getElementById('gh-config').hidden = false;
+      document.getElementById('gh-resumen').hidden = true;
+    }
+
+    // Convierte el blob en base64 (sin el prefijo data:) para la API de GitHub
+    function blobABase64(blob) {
+      return new Promise((resolve, reject) => {
+        const lector = new FileReader();
+        lector.onload = () => resolve(lector.result.split(',')[1]);
+        lector.onerror = () => reject(new Error('No se pudo leer la foto'));
+        lector.readAsDataURL(blob);
+      });
+    }
+
+    function mensajeError(status) {
+      if (status === 401) return 'el token no es válido o ha caducado.';
+      if (status === 403) return 'el token no tiene permiso para escribir en el repositorio.';
+      if (status === 404) return 'no se encuentra el usuario o el repositorio.';
+      if (status === 409) return 'conflicto al guardar; vuelve a intentarlo.';
+      return `GitHub respondió con el código ${status}.`;
+    }
+
+    // Crea o reemplaza foto-pista-N.jpg en la rama principal del repositorio
+    async function subirAGitHub(n, blob) {
+      const repo = leerRepo();
+      const token = leerToken();
+      const url = `https://api.github.com/repos/${encodeURIComponent(repo.usuario)}/${encodeURIComponent(repo.repo)}/contents/foto-pista-${n}.jpg`;
+      const cabeceras = {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28'
+      };
+
+      // Si el archivo ya existe, GitHub exige su sha para reemplazarlo
+      const previo = await fetch(url, { headers: cabeceras });
+      const sha = previo.ok ? (await previo.json()).sha : undefined;
+
+      const respuesta = await fetch(url, {
+        method: 'PUT',
+        headers: { ...cabeceras, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `Foto pista ${n}`,
+          content: await blobABase64(blob),
+          sha
+        })
+      });
+
+      if (!respuesta.ok) throw new Error(mensajeError(respuesta.status));
+    }
+
+    // El panel solo aparece con ?fotos en la dirección; la visitante no lo ve
+    if (new URLSearchParams(location.search).has('fotos')) {
+      document.getElementById('panel-fotos').hidden = false;
+      construirPanelFotos();
+      actualizarConfigGitHub();
+
+      document.getElementById('gh-config').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const usuario = document.getElementById('gh-usuario').value.trim();
+        const repo = document.getElementById('gh-repo').value.trim();
+        const token = document.getElementById('gh-token').value.trim();
+        try {
+          localStorage.setItem(CLAVE_REPO, JSON.stringify({ usuario, repo }));
+          sessionStorage.setItem(CLAVE_TOKEN, token);
+        } catch {
+          alert('Este navegador no permite guardar la conexión.');
+          return;
+        }
+        document.getElementById('gh-token').value = '';
+        actualizarConfigGitHub();
+      });
+
+      document.getElementById('gh-cambiar').addEventListener('click', () => {
+        try {
+          sessionStorage.removeItem(CLAVE_TOKEN);
+        } catch {}
+        actualizarConfigGitHub();
+      });
+    }
+
+    /* ===== Eventos de navegación ===== */
+
+    // Fase 1 → Fase 2 con confeti
+    document.getElementById('btn-abrir').addEventListener('click', () => {
+      lanzarConfeti();
+      irAPaso(2);
+    });
+
+    // Fase 2 → Fase 3
+    document.getElementById('btn-maleta').addEventListener('click', () => irAPaso(3));
+
+    // Fase 3 → Fase 4
+    document.getElementById('btn-pase').addEventListener('click', () => irAPaso(4));
+
+    // QR que abre la foto (la ruta se resuelve desde la web publicada)
+    if (typeof QRCode === 'function') {
+      new QRCode(document.getElementById('qr'), {
+        text: new URL(RUTA_FOTO, location.href).href,
+        width: 104,
+        height: 104,
+        colorDark: '#4a1220',
+        colorLight: '#fbf1ea',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    // Confirmación final: doble ráfaga y mensaje de celebración
+    document.getElementById('btn-confirmar').addEventListener('click', (e) => {
+      rafagaDoble();
+      e.currentTarget.disabled = true;
+      e.currentTarget.textContent = '¡Asistencia confirmada!';
+      document.getElementById('final-msg').style.display = 'block';
+    });
+  </script>
+</body>
+</html>
