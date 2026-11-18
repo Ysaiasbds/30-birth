@@ -857,6 +857,31 @@
       outline-offset: 2px;
     }
 
+    /* ===== 10f. Espera entre pistas ===== */
+    .espera {
+      margin-top: 16px;
+      padding: 14px;
+      text-align: center;
+      background: var(--melocoton);
+      border-radius: 18px;
+    }
+
+    .espera[hidden] { display: none; }
+
+    .espera p {
+      font-size: 0.9rem;
+      color: var(--texto-suave);
+    }
+
+    .espera-tiempo {
+      display: block;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 2.4rem;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      color: var(--bordo);
+    }
+
     /* ===== 11. Ajustes móviles ===== */
     @media (max-width: 360px) {
       .app { padding: 22px 16px; }
@@ -993,6 +1018,12 @@
       <p class="pistas-hint" id="nota-pistas">
         Rasca cada pista en orden. Cada una abre la siguiente.
       </p>
+
+      <!-- Espera entre pistas: cuenta atrás hasta la siguiente -->
+      <div class="espera" id="espera" role="status" hidden>
+        <p>La siguiente pista se abre en</p>
+        <span class="espera-tiempo" id="espera-tiempo">60:00</span>
+      </div>
 
       <!-- Pasaporte: cada pista descubierta estampa su sello -->
       <div class="pasaporte" aria-hidden="true">
@@ -1207,7 +1238,7 @@
        Ejemplo: '2027-01-15T09:00:00' = 15 de enero de 2027 a las 09:00.
        Para cambiarla, edita solo la cadena de dentro de las comillas.
        ========================================================== */
-    const targetDate = new Date('2026-11-21T09:00:00');
+    const targetDate = new Date('2026-10-21T09:00:00');
 
     // Respuesta del candado: la edad que cumple
     const CODIGO_CANDADO = '30';
@@ -1255,6 +1286,7 @@
       document.querySelectorAll('.progreso span').forEach((barra, i) => {
         barra.classList.toggle('on', i < n);
       });
+      if (n === 3) prepararRascasPendientes();
       // El mapa aparece solo en el pase final
       if (n === 4) mostrarMapa();
     }
@@ -1369,6 +1401,15 @@
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('✦ rasca aquí ✦', ancho / 2, alto / 2);
+      canvas.dataset.listo = '1';
+    }
+
+    // Prepara los lienzos de las pistas visibles cuando la fase 3 aparece
+    function prepararRascasPendientes() {
+      pistas.forEach((pista) => {
+        const canvas = pista.querySelector('.rasca');
+        if (!pista.hidden && !canvas.dataset.listo) prepararRasca(canvas);
+      });
     }
 
     // Fracción de la capa ya borrada (muestreo de 1 de cada 4 píxeles)
@@ -1384,8 +1425,26 @@
       return transparentes / total;
     }
 
-    // Descubre una pista y desbloquea la siguiente; tras la última aparece el pase
+    // Descubre una pista y la marca en pasaporte y pase; tras la insignia empieza la espera
     function descubrir(indice) {
+      const pista = pistas[indice];
+      if (pista.classList.contains('found')) return;
+
+      marcarDescubierta(indice);
+
+      // La insignia se muestra primero; después empieza la espera hasta la siguiente pista
+      mostrarInsignia(pista.dataset.insignia, pista.dataset.icono, () => {
+        if (pistas[indice + 1]) {
+          iniciarEspera(indice + 1);
+        } else {
+          document.getElementById('nota-pistas').textContent = 'Ya tienes las cinco. Solo falta el pase.';
+          document.getElementById('btn-pase').hidden = false;
+        }
+      });
+    }
+
+    // Marca una pista como descubierta y la guarda; se usa también al recuperar el progreso
+    function marcarDescubierta(indice) {
       const pista = pistas[indice];
       if (pista.classList.contains('found')) return;
 
@@ -1396,16 +1455,9 @@
       // Estampa el sello de esta pista en el pasaporte y en el pase
       document.querySelectorAll(`[data-sello="${indice}"]`).forEach((sello) => sello.classList.add('on'));
 
-      // La insignia se muestra primero; la siguiente pista aparece al tocar "Seguir"
-      mostrarInsignia(pista.dataset.insignia, pista.dataset.icono, () => {
-        if (pistas[indice + 1]) {
-          desbloquear(indice + 1);
-          document.getElementById('nota-pistas').textContent = 'Sigue con la siguiente pista.';
-        } else {
-          document.getElementById('nota-pistas').textContent = 'Ya tienes las cinco. Solo falta el pase.';
-          document.getElementById('btn-pase').hidden = false;
-        }
-      });
+      const progreso = leerProgreso();
+      if (!progreso.encontradas.includes(indice)) progreso.encontradas.push(indice);
+      guardarProgreso(progreso);
     }
 
     // Insignia al descubrir una pista; alSeguir continúa cuando la toca
@@ -1442,7 +1494,8 @@
 
       pista.hidden = false;
       pista.classList.add('entra');
-      prepararRasca(canvas);
+      // Si la fase 3 está oculta, el lienzo no tiene tamaño: se prepara al mostrarla
+      if (canvas.clientWidth) prepararRasca(canvas);
       activarRasca(canvas, indice);
       pista.querySelector('.pista-revelar').addEventListener('click', () => descubrir(indice));
     }
@@ -1500,6 +1553,9 @@
         input.disabled = true;
         document.getElementById('btn-candado').disabled = true;
         mensaje.textContent = 'Candado abierto. Rasca la primera pista.';
+        const progreso = leerProgreso();
+        progreso.candado = true;
+        guardarProgreso(progreso);
         desbloquear(0);
       } else {
         mensaje.textContent = 'No es ese número. Piensa en la edad de la festejada.';
@@ -1760,6 +1816,106 @@
         actualizarConfigGitHub();
       });
     }
+
+    /* ===== Progreso guardado y espera entre pistas ===== */
+
+    // Minutos de espera entre una pista y la siguiente (cámbialo aquí)
+    const MINUTOS_ENTRE_PISTAS = 60;
+    const CLAVE_PROGRESO = 'enna-progreso';
+    let intervaloEspera = null;
+
+    function leerProgreso() {
+      const inicial = { candado: false, encontradas: [], espera: null };
+      try {
+        return { ...inicial, ...JSON.parse(localStorage.getItem(CLAVE_PROGRESO)) };
+      } catch {
+        return inicial;
+      }
+    }
+
+    function guardarProgreso(progreso) {
+      try {
+        localStorage.setItem(CLAVE_PROGRESO, JSON.stringify(progreso));
+      } catch {
+        // Sin almacenamiento, el progreso solo dura mientras la página esté abierta
+      }
+    }
+
+    // Guarda la espera hasta la pista indicada y la muestra
+    function iniciarEspera(indice) {
+      const progreso = leerProgreso();
+      progreso.espera = { indice, hasta: Date.now() + MINUTOS_ENTRE_PISTAS * 60 * 1000 };
+      guardarProgreso(progreso);
+      document.getElementById('nota-pistas').textContent = 'Tómatelo con calma: la siguiente pista llega pronto.';
+      mostrarEspera();
+    }
+
+    // Muestra la cuenta atrás y desbloquea la pista al llegar a cero
+    function mostrarEspera() {
+      clearInterval(intervaloEspera);
+      const espera = document.getElementById('espera');
+      const progreso = leerProgreso();
+
+      if (!progreso.espera) {
+        espera.hidden = true;
+        return;
+      }
+
+      const { indice, hasta } = progreso.espera;
+      const tiempo = document.getElementById('espera-tiempo');
+      espera.hidden = false;
+
+      // Devuelve true mientras falte tiempo
+      const actualizar = () => {
+        const restante = hasta - Date.now();
+        if (restante > 0) {
+          const seg = Math.ceil(restante / 1000);
+          tiempo.textContent = `${pad(Math.floor(seg / 60))}:${pad(seg % 60)}`;
+          return true;
+        }
+
+        const actual = leerProgreso();
+        actual.espera = null;
+        guardarProgreso(actual);
+        espera.hidden = true;
+        if (pistas[indice].hidden) desbloquear(indice);
+        document.getElementById('nota-pistas').textContent = 'Ya puedes rascar la siguiente pista.';
+        return false;
+      };
+
+      if (actualizar()) {
+        intervaloEspera = setInterval(() => {
+          if (!actualizar()) clearInterval(intervaloEspera);
+        }, 1000);
+      }
+    }
+
+    // Recupera el candado, las pistas descubiertas y la espera al recargar la página
+    function restaurarProgreso() {
+      const progreso = leerProgreso();
+      if (!progreso.candado) return;
+
+      document.getElementById('edad').disabled = true;
+      document.getElementById('btn-candado').disabled = true;
+      document.getElementById('candado-msg').textContent = 'Candado abierto.';
+
+      progreso.encontradas.forEach((indice) => {
+        desbloquear(indice);
+        marcarDescubierta(indice);
+      });
+
+      if (progreso.espera) {
+        mostrarEspera();
+      } else if (progreso.encontradas.length === pistas.length) {
+        document.getElementById('nota-pistas').textContent = 'Ya tienes las cinco. Solo falta el pase.';
+        document.getElementById('btn-pase').hidden = false;
+      } else {
+        const siguiente = progreso.encontradas.length ? Math.max(...progreso.encontradas) + 1 : 0;
+        if (pistas[siguiente].hidden) desbloquear(siguiente);
+      }
+    }
+
+    restaurarProgreso();
 
     /* ===== Eventos de navegación ===== */
 
