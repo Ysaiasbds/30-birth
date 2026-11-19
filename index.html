@@ -10,7 +10,7 @@
   <!-- Fraunces para titulares (Google Fonts) y Leaflet para el mapa -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,800;1,9..144,400;1,9..144,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 
   <style>
@@ -402,6 +402,114 @@
     }
 
     .ticket-rows { margin-top: 6px; }
+
+    /* Itinerario: línea de tiempo dentro del billete, sin cajas anidadas */
+    .itinerario-titulo {
+      margin-top: 18px;
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--bordo-hondo);
+    }
+
+    .itinerario {
+      position: relative;
+      list-style: none;
+      margin-top: 12px;
+      padding-left: 22px;
+    }
+
+    .itinerario::before {
+      content: "";
+      position: absolute;
+      left: 6px;
+      top: 6px;
+      bottom: 6px;
+      width: 2px;
+      background: rgba(107, 30, 46, 0.35);
+    }
+
+    .itinerario li {
+      position: relative;
+      padding-bottom: 14px;
+    }
+
+    .itinerario li:last-child { padding-bottom: 0; }
+
+    .itinerario li::before {
+      content: "";
+      position: absolute;
+      left: -20px;
+      top: 4px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--bordo);
+      border: 3px solid var(--melocoton);
+    }
+
+    .itinerario-dia {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--bordo);
+    }
+
+    .traido-lista,
+    .destinos-lista {
+      list-style: none;
+      margin-top: 4px;
+    }
+
+    .traido-lista li { padding: 2px 0; }
+
+    /* Destinos: una ruta con tres paradas unidas por una línea discontinua */
+    .destinos { margin-top: 18px; }
+
+    .destinos-lista {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .destinos-lista::before {
+      content: "";
+      position: absolute;
+      left: 16%;
+      right: 16%;
+      top: 7px;
+      border-top: 2px dashed rgba(107, 30, 46, 0.4);
+    }
+
+    .destinos-lista li {
+      position: relative;
+      text-align: center;
+      font-family: "Fraunces", Georgia, serif;
+      font-style: italic;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--bordo-hondo);
+    }
+
+    .destinos-lista li::before {
+      content: "";
+      display: block;
+      width: 14px;
+      height: 14px;
+      margin: 0 auto 8px;
+      border-radius: 50%;
+      background: var(--bordo);
+      border: 3px solid var(--melocoton);
+    }
+
+    .itinerario p {
+      margin-top: 2px;
+      font-size: 0.95rem;
+      line-height: 1.45;
+      color: var(--bordo-hondo);
+    }
 
     .row {
       display: flex;
@@ -882,6 +990,153 @@
       color: var(--bordo);
     }
 
+    /* ===== 10g. Álbum final ===== */
+    .album {
+      margin-top: 22px;
+      animation: entrada 0.6s ease both;
+    }
+
+    .album[hidden] { display: none; }
+
+    .album-titulo {
+      text-align: center;
+      font-size: 1.3rem;
+      color: var(--bordo);
+    }
+
+    .album-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .album-grid img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      border-radius: 14px;
+      background: var(--melocoton);
+    }
+
+    /* ===== 10h. Álbum resumen del pase ===== */
+    .mini-album {
+      margin-top: 16px;
+      animation: entrada 0.6s ease both;
+    }
+
+    .mini-album[hidden] { display: none; }
+
+    .mini-album-titulo {
+      margin-bottom: 10px;
+      font-family: "Fraunces", Georgia, serif;
+      font-style: italic;
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: var(--bordo-hondo);
+    }
+
+    .mini-album-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      padding: 4px 2px;
+    }
+
+    /* Fotos ligeramente giradas, como si estuvieran pegadas en un álbum */
+    .mini-album-grid img {
+      display: block;
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border: 3px solid var(--crema);
+      border-radius: 6px;
+      background: var(--melocoton);
+    }
+
+    .mini-album-grid img:nth-child(odd) { transform: rotate(-2deg); }
+    .mini-album-grid img:nth-child(even) { transform: rotate(2deg); }
+
+    /* ===== 10i. Tipografía: escala y voz de los textos ===== */
+    body { line-height: 1.55; }
+
+    h1 {
+      font-size: clamp(1.7rem, 7vw, 2.1rem);
+      line-height: 1.1;
+      letter-spacing: -0.025em;
+      font-variation-settings: "opsz" 72;
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      line-height: 1.2;
+      letter-spacing: -0.015em;
+    }
+
+    .lead {
+      max-width: 52ch;
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+
+    .badge {
+      letter-spacing: 0.01em;
+    }
+
+    .pista-titulo {
+      font-family: "Fraunces", Georgia, serif;
+      font-size: 1.12rem;
+      font-weight: 700;
+    }
+
+    .pista-estado {
+      font-style: italic;
+    }
+
+    .ticket-title {
+      font-size: 1.2rem;
+      letter-spacing: 0.005em;
+    }
+
+    .row dt {
+      font-family: "Fraunces", Georgia, serif;
+      font-style: italic;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .row dd {
+      font-size: 0.97rem;
+    }
+
+    .itinerario-titulo {
+      font-style: italic;
+      font-weight: 600;
+    }
+
+    .itinerario-dia {
+      font-family: "Fraunces", Georgia, serif;
+      font-style: italic;
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+
+    .itinerario p,
+    .destinos-lista li {
+      font-size: 1rem;
+    }
+
+    .final-msg {
+      font-style: italic;
+      font-size: 1.15rem;
+      line-height: 1.5;
+    }
+
+    .unit span {
+      letter-spacing: 0.02em;
+    }
+
     /* ===== 11. Ajustes móviles ===== */
     @media (max-width: 360px) {
       .app { padding: 22px 16px; }
@@ -946,7 +1201,7 @@
 
       <p class="finish-msg" id="finish-msg">¡Es la hora de arrancar! 🚗💨</p>
 
-      <button class="btn" id="btn-abrir" type="button" disabled>Se debe esperar un poco</button>
+      <button class="btn" id="btn-abrir" type="button" disabled>Se abre a las 00:00:00</button>
     </section>
 
     <!-- ===== FASE 2: Preparativos de la maleta ===== -->
@@ -1159,10 +1414,35 @@
           <div class="row"><dt>Destino</dt><dd>¡Sorpresa en la costa!</dd></div>
           <div class="row"><dt>Fecha</dt><dd id="fecha-fin"></dd></div>
           <div class="row">
-            <dt>Qué llevar</dt>
-            <dd>Calzado cómodo para caminar mucho, algo de abrigo para la brisa del mar y muchas ganas.</dd>
+            <dt>Lo que ha traído</dt>
+            <dd id="traido"></dd>
           </div>
         </dl>
+
+        <!-- Itinerario del fin de semana: una secuencia, por eso va numerada en la línea de tiempo -->
+        <h3 class="itinerario-titulo">Resumen del fin de semana</h3>
+        <ol class="itinerario">
+          <li>
+            <span class="itinerario-dia">Sábado · salida</span>
+            <p>Desde Bilbao, rumbo al oeste y junto al Cantábrico durante unas 3 horas.</p>
+          </li>
+          <li>
+            <span class="itinerario-dia">Sábado · Gijón</span>
+            <p>Paseo por el casco viejo, el mar Cantábrico y algo rico para comer.</p>
+          </li>
+          <li>
+            <span class="itinerario-dia">Sábado · noche</span>
+            <p>Vuelta a Santander para dormir.</p>
+          </li>
+          <li>
+            <span class="itinerario-dia">Domingo · mañana, tu cumpleaños</span>
+            <p>Zoo: naturaleza, rugidos, plumas y criaturas de todo el mundo.</p>
+          </li>
+          <li>
+            <span class="itinerario-dia">Domingo · tarde</span>
+            <p>Paseo de vuelta a Santander.</p>
+          </li>
+        </ol>
 
         <div class="sellos" aria-hidden="true">
           <span class="sello-hueco"><svg class="sello" data-sello="0" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><path d="M24 10l4 14-4 14-4-14z"/></svg></span>
@@ -1172,19 +1452,25 @@
           <span class="sello-hueco"><svg class="sello" data-sello="4" viewBox="0 0 48 48"><circle cx="24" cy="24" r="20"/><circle cx="24" cy="24" r="8"/><path d="M24 4v6M24 38v6M4 24h6M38 24h6"/></svg></span>
         </div>
 
-        <div class="qr-bloque">
-          <div class="qr-caja" id="qr" role="img" aria-label="Código QR que abre una foto vuestra"></div>
-          <p class="qr-texto">Escanea para ver una foto nuestra</p>
+        <!-- Álbum resumen: fotos album-1.jpg a album-6.jpg; solo aparece si hay alguna -->
+        <div class="mini-album" id="mini-album" hidden>
+          <h3 class="mini-album-titulo">Nuestro álbum</h3>
+          <div class="mini-album-grid" id="mini-album-grid"></div>
         </div>
       </div>
 
       <div class="mapa" id="mapa" role="img" aria-label="Mapa con las ubicaciones del fin de semana"></div>
 
-      <p class="gps-note">
-        El destino exacto en el GPS se desbloqueará al arrancar el coche.
-      </p>
+      <div class="destinos">
+        <h3 class="itinerario-titulo">Destinos visitados</h3>
+        <ul class="destinos-lista">
+          <li>Gijón</li>
+          <li>El zoo</li>
+          <li>Santander</li>
+        </ul>
+      </div>
 
-      <button class="btn" id="btn-confirmar" type="button">Confirmar asistencia</button>
+      <button class="btn" id="btn-resumen" type="button">Resumen del viaje</button>
 
       <p class="final-msg" id="final-msg">
         Enna, has cumplido 30 y no hay mejor forma de celebrarlo que
@@ -1227,7 +1513,6 @@
 
   <!-- Librerías externas (CDN): confeti y código QR -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/canvas-confetti/1.9.3/confetti.browser.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 
   <script>
@@ -1238,7 +1523,7 @@
        Ejemplo: '2027-01-15T09:00:00' = 15 de enero de 2027 a las 09:00.
        Para cambiarla, edita solo la cadena de dentro de las comillas.
        ========================================================== */
-    const targetDate = new Date('2026-11-21T09:00:00');
+    const targetDate = new Date('2026-10-21T09:00:00');
 
     // Respuesta del candado: la edad que cumple
     const CODIGO_CANDADO = '30';
@@ -1287,8 +1572,12 @@
         barra.classList.toggle('on', i < n);
       });
       if (n === 3) prepararRascasPendientes();
-      // El mapa aparece solo en el pase final
-      if (n === 4) mostrarMapa();
+      // El mapa y la lista de lo traído aparecen solo en el pase final
+      if (n === 4) {
+        mostrarMapa();
+        rellenarTraido();
+        mostrarAlbum();
+      }
     }
 
     /* ===== Mapa de ubicaciones (solo en el pase) ===== */
@@ -1375,6 +1664,9 @@
         const marcado = objeto.getAttribute('aria-pressed') === 'true';
         objeto.setAttribute('aria-pressed', String(!marcado));
         actualizarContador();
+        // Al completar todas las tareas empieza la espera antes de la primera pista
+        const todas = document.querySelectorAll('.item').length;
+        if (document.querySelectorAll('.item[aria-pressed="true"]').length === todas) completarTareas();
       });
     });
 
@@ -1552,11 +1844,18 @@
       if (input.value.trim() === CODIGO_CANDADO) {
         input.disabled = true;
         document.getElementById('btn-candado').disabled = true;
-        mensaje.textContent = 'Candado abierto. Rasca la primera pista.';
         const progreso = leerProgreso();
         progreso.candado = true;
         guardarProgreso(progreso);
-        desbloquear(0);
+
+        if (!progreso.tareasHechas) {
+          mensaje.textContent = 'Candado abierto. Termina la lista de tareas para continuar.';
+        } else if (progreso.espera) {
+          mensaje.textContent = 'Candado abierto. Las pistas se abren al terminar la espera.';
+        } else {
+          mensaje.textContent = 'Candado abierto. Rasca la primera pista.';
+          desbloquear(0);
+        }
       } else {
         mensaje.textContent = 'No es ese número. Piensa en la edad de la festejada.';
         input.select();
@@ -1565,12 +1864,18 @@
 
     /* ===== Panel de carga de fotos (solo con ?fotos) ===== */
 
-    // Una fila por foto. "La tarde" comparte la foto 4, así que no tiene fila propia.
+    // Fotos de las pistas (una fila cada una) y fotos del álbum resumen del pase.
+    // "La tarde" comparte la foto 4, así que no tiene fila propia.
+    const FOTOS_ALBUM = 6;
     const FILAS_FOTO = [
-      { n: 1, etiqueta: 'El rumbo' },
-      { n: 2, etiqueta: 'El destino' },
-      { n: 3, etiqueta: 'La vuelta' },
-      { n: 4, etiqueta: 'La mañana y La tarde' }
+      { archivo: 'foto-pista-1.jpg', etiqueta: 'El rumbo' },
+      { archivo: 'foto-pista-2.jpg', etiqueta: 'El destino' },
+      { archivo: 'foto-pista-3.jpg', etiqueta: 'La vuelta' },
+      { archivo: 'foto-pista-4.jpg', etiqueta: 'La mañana y La tarde' },
+      ...Array.from({ length: FOTOS_ALBUM }, (_, i) => ({
+        archivo: `album-${i + 1}.jpg`,
+        etiqueta: `Álbum · foto ${i + 1}`
+      }))
     ];
 
     // Reduce la imagen a 1280 px de lado largo y la devuelve como JPEG
@@ -1601,7 +1906,7 @@
 
     // Indica si foto-pista-N.jpg ya está en la carpeta. Se usa una imagen y no fetch,
     // porque fetch no funciona con archivos abiertos desde el disco (file://).
-    function comprobarFoto(n, estado) {
+    function comprobarFoto(archivo, estado) {
       const sonda = new Image();
       sonda.onload = () => {
         estado.textContent = 'Lista en la carpeta';
@@ -1611,27 +1916,27 @@
         estado.textContent = 'Falta: copia el archivo a la carpeta del proyecto';
         estado.dataset.estado = 'falta';
       };
-      sonda.src = `foto-pista-${n}.jpg`;
+      sonda.src = archivo;
     }
 
     // Construye el panel: selector, vista previa y botón de descarga por cada foto
     function construirPanelFotos() {
       const contenedor = document.getElementById('filas-foto');
 
-      FILAS_FOTO.forEach(({ n, etiqueta }) => {
+      FILAS_FOTO.forEach(({ archivo, etiqueta }) => {
         const fila = document.createElement('div');
         fila.className = 'foto-fila';
         fila.innerHTML = `
-          <img alt="Vista previa de la foto ${n}" hidden>
+          <img alt="Vista previa de ${archivo}" hidden>
           <div>
-            <label>${etiqueta} <span>· foto-pista-${n}.jpg</span></label>
+            <label>${etiqueta} <span>· ${archivo}</span></label>
             <span class="foto-estado">Comprobando…</span>
             <input type="file" accept="image/*">
-            <button type="button" disabled>Descargar foto-pista-${n}.jpg</button>
+            <button type="button" disabled>Descargar ${archivo}</button>
             <button type="button" class="subir" disabled>Subir a GitHub</button>
           </div>`;
 
-        comprobarFoto(n, fila.querySelector('.foto-estado'));
+        comprobarFoto(archivo, fila.querySelector('.foto-estado'));
 
         const entrada = fila.querySelector('input');
         const vista = fila.querySelector('img');
@@ -1662,7 +1967,7 @@
           if (!blobListo) return;
           const enlace = document.createElement('a');
           enlace.href = URL.createObjectURL(blobListo);
-          enlace.download = `foto-pista-${n}.jpg`;
+          enlace.download = archivo;
           enlace.click();
           URL.revokeObjectURL(enlace.href);
         });
@@ -1677,7 +1982,7 @@
           botonSubir.disabled = true;
           botonSubir.textContent = 'Subiendo…';
           try {
-            await subirAGitHub(n, blobListo);
+            await subirAGitHub(archivo, blobListo);
             estado.textContent = 'Subida a GitHub. Aparecerá en la web en 1 o 2 minutos.';
             estado.dataset.estado = 'lista';
           } catch (error) {
@@ -1759,11 +2064,11 @@
       return `GitHub respondió con el código ${status}.`;
     }
 
-    // Crea o reemplaza foto-pista-N.jpg en la rama principal del repositorio
-    async function subirAGitHub(n, blob) {
+    // Crea o reemplaza el archivo indicado en la rama principal del repositorio
+    async function subirAGitHub(archivo, blob) {
       const repo = leerRepo();
       const token = leerToken();
-      const url = `https://api.github.com/repos/${encodeURIComponent(repo.usuario)}/${encodeURIComponent(repo.repo)}/contents/foto-pista-${n}.jpg`;
+      const url = `https://api.github.com/repos/${encodeURIComponent(repo.usuario)}/${encodeURIComponent(repo.repo)}/contents/${archivo}`;
       const cabeceras = {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github+json',
@@ -1778,7 +2083,7 @@
         method: 'PUT',
         headers: { ...cabeceras, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `Foto pista ${n}`,
+          message: `Subir ${archivo}`,
           content: await blobABase64(blob),
           sha
         })
@@ -1821,6 +2126,8 @@
 
     // Minutos de espera entre una pista y la siguiente (cámbialo aquí)
     const MINUTOS_ENTRE_PISTAS = 60;
+    // Minutos entre completar la lista de tareas y poder rascar la primera pista
+    const MINUTOS_ANTES_PRIMERA_PISTA = 120;
     const CLAVE_PROGRESO = 'enna-progreso';
     let intervaloEspera = null;
 
@@ -1842,9 +2149,9 @@
     }
 
     // Guarda la espera hasta la pista indicada y la muestra
-    function iniciarEspera(indice) {
+    function iniciarEspera(indice, minutos = MINUTOS_ENTRE_PISTAS) {
       const progreso = leerProgreso();
-      progreso.espera = { indice, hasta: Date.now() + MINUTOS_ENTRE_PISTAS * 60 * 1000 };
+      progreso.espera = { indice, hasta: Date.now() + minutos * 60 * 1000 };
       guardarProgreso(progreso);
       document.getElementById('nota-pistas').textContent = 'Tómatelo con calma: la siguiente pista llega pronto.';
       mostrarEspera();
@@ -1878,8 +2185,13 @@
         actual.espera = null;
         guardarProgreso(actual);
         espera.hidden = true;
-        if (pistas[indice].hidden) desbloquear(indice);
-        document.getElementById('nota-pistas').textContent = 'Ya puedes rascar la siguiente pista.';
+        // La primera pista también necesita el candado abierto
+        if (pistas[indice].hidden && (indice > 0 || actual.candado)) {
+          desbloquear(indice);
+          document.getElementById('nota-pistas').textContent = 'Ya puedes rascar la pista.';
+        } else if (indice === 0) {
+          document.getElementById('nota-pistas').textContent = 'Ya puedes rascar la primera pista. Abre el candado.';
+        }
         return false;
       };
 
@@ -1890,10 +2202,29 @@
       }
     }
 
+    // Marca como hechas todas las tareas (al recargar la página)
+    function marcarTareasHechas() {
+      document.querySelectorAll('.item').forEach((objeto) => objeto.setAttribute('aria-pressed', 'true'));
+      actualizarContador();
+    }
+
+    // Al completar la lista: empieza la espera de 120 min antes de la primera pista
+    function completarTareas() {
+      const progreso = leerProgreso();
+      if (progreso.tareasHechas) return;
+      progreso.tareasHechas = true;
+      guardarProgreso(progreso);
+      iniciarEspera(0, MINUTOS_ANTES_PRIMERA_PISTA);
+    }
+
     // Recupera el candado, las pistas descubiertas y la espera al recargar la página
     function restaurarProgreso() {
       const progreso = leerProgreso();
-      if (!progreso.candado) return;
+      if (progreso.tareasHechas) marcarTareasHechas();
+      if (!progreso.candado) {
+        if (progreso.espera) mostrarEspera();
+        return;
+      }
 
       document.getElementById('edad').disabled = true;
       document.getElementById('btn-candado').disabled = true;
@@ -1911,7 +2242,7 @@
         document.getElementById('btn-pase').hidden = false;
       } else {
         const siguiente = progreso.encontradas.length ? Math.max(...progreso.encontradas) + 1 : 0;
-        if (pistas[siguiente].hidden) desbloquear(siguiente);
+        if (pistas[siguiente].hidden && progreso.tareasHechas) desbloquear(siguiente);
       }
     }
 
@@ -1931,25 +2262,49 @@
     // Fase 3 → Fase 4
     document.getElementById('btn-pase').addEventListener('click', () => irAPaso(4));
 
-    // QR que abre la foto (la ruta se resuelve desde la web publicada)
-    if (typeof QRCode === 'function') {
-      new QRCode(document.getElementById('qr'), {
-        text: new URL(RUTA_FOTO, location.href).href,
-        width: 104,
-        height: 104,
-        colorDark: '#4a1220',
-        colorLight: '#fbf1ea',
-        correctLevel: QRCode.CorrectLevel.M
-      });
-    }
-
-    // Confirmación final: doble ráfaga y mensaje de celebración
-    document.getElementById('btn-confirmar').addEventListener('click', (e) => {
+    // Resumen final: doble ráfaga y mensaje de celebración
+    document.getElementById('btn-resumen').addEventListener('click', (e) => {
       rafagaDoble();
-      e.currentTarget.disabled = true;
-      e.currentTarget.textContent = '¡Asistencia confirmada!';
+      e.currentTarget.hidden = true;
       document.getElementById('final-msg').style.display = 'block';
     });
+
+    // Lista en el pase las tareas que ella ha marcado en la fase 2
+    function rellenarTraido() {
+      const dd = document.getElementById('traido');
+      const marcadas = [...document.querySelectorAll('.item[aria-pressed="true"] span')].map((s) => s.textContent);
+      dd.innerHTML = '';
+
+      if (!marcadas.length) {
+        dd.textContent = 'Ninguna tarea marcada todavía';
+        return;
+      }
+
+      const lista = document.createElement('ul');
+      lista.className = 'traido-lista';
+      marcadas.forEach((texto) => {
+        const elemento = document.createElement('li');
+        elemento.textContent = texto;
+        lista.appendChild(elemento);
+      });
+      dd.appendChild(lista);
+    }
+
+    // Álbum resumen del pase: muestra album-N.jpg que existan; si no hay ninguna, no aparece
+    function mostrarAlbum() {
+      const bloque = document.getElementById('mini-album');
+      const grid = document.getElementById('mini-album-grid');
+      if (grid.children.length) return;
+
+      for (let n = 1; n <= FOTOS_ALBUM; n++) {
+        const foto = document.createElement('img');
+        foto.alt = `Foto ${n} del fin de semana`;
+        foto.onload = () => { bloque.hidden = false; };
+        foto.onerror = () => foto.remove();
+        foto.src = `album-${n}.jpg`;
+        grid.appendChild(foto);
+      }
+    }
   </script>
 </body>
 </html>
