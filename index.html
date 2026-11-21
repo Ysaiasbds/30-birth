@@ -1727,7 +1727,7 @@
       // La insignia se muestra primero; después empieza la espera hasta la siguiente pista
       mostrarInsignia(pista.dataset.insignia, pista.dataset.icono, () => {
         if (pistas[indice + 1]) {
-          iniciarEspera(indice + 1);
+          iniciarEspera(indice + 1, ESPERA_TRAS_PISTA[indice]);
         } else {
           document.getElementById('nota-pistas').textContent = 'Ya tienes las cinco. Solo falta el pase.';
           document.getElementById('btn-pase').hidden = false;
@@ -2126,6 +2126,9 @@
 
     // Minutos de espera entre una pista y la siguiente (cámbialo aquí)
     const MINUTOS_ENTRE_PISTAS = 60;
+    // Espera tras descubrir cada pista (en minutos): pista 1, 2, 3 y 4.
+    // Tras la 3.ª: 12 h hasta la 4.ª. Tras la 4.ª: 5 h hasta la 5.ª.
+    const ESPERA_TRAS_PISTA = [MINUTOS_ENTRE_PISTAS, MINUTOS_ENTRE_PISTAS, 12 * 60, 5 * 60];
     // Minutos entre completar la lista de tareas y poder rascar la primera pista
     const MINUTOS_ANTES_PRIMERA_PISTA = 180;
     const CLAVE_PROGRESO = 'enna-progreso';
