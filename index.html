@@ -923,6 +923,14 @@
 
     .gh-resumen[hidden] { display: none; }
 
+    .foto-descripcion {
+      margin-top: 2px;
+      font-size: 0.85rem;
+      line-height: 1.4;
+      color: var(--crema);
+      opacity: 0.85;
+    }
+
     .foto-estado {
       display: block;
       margin-top: 2px;
@@ -1868,13 +1876,30 @@
     // "La tarde" comparte la foto 4, así que no tiene fila propia.
     const FOTOS_ALBUM = 6;
     const FILAS_FOTO = [
-      { archivo: 'foto-pista-1.jpg', etiqueta: 'El rumbo' },
-      { archivo: 'foto-pista-2.jpg', etiqueta: 'El destino' },
-      { archivo: 'foto-pista-3.jpg', etiqueta: 'La vuelta' },
-      { archivo: 'foto-pista-4.jpg', etiqueta: 'La mañana y La tarde' },
+      {
+        archivo: 'foto-pista-1.jpg',
+        etiqueta: 'El rumbo',
+        descripcion: 'Salida desde Bilbao, rumbo al oeste junto al Cantábrico (unas 3 horas).'
+      },
+      {
+        archivo: 'foto-pista-2.jpg',
+        etiqueta: 'El destino',
+        descripcion: 'Ciudad marinera: casco viejo, paseo junto al mar y algo rico para comer.'
+      },
+      {
+        archivo: 'foto-pista-3.jpg',
+        etiqueta: 'La vuelta',
+        descripcion: 'Al caer la noche, vuelta a Santander.'
+      },
+      {
+        archivo: 'foto-pista-4.jpg',
+        etiqueta: 'La mañana y La tarde',
+        descripcion: 'Día de cumpleaños: la mañana con naturaleza, rugidos, plumas y criaturas; la tarde, paseo a Santander. Esta foto sirve para las dos pistas.'
+      },
       ...Array.from({ length: FOTOS_ALBUM }, (_, i) => ({
         archivo: `album-${i + 1}.jpg`,
-        etiqueta: `Álbum · foto ${i + 1}`
+        etiqueta: `Álbum · foto ${i + 1}`,
+        descripcion: 'Foto para el álbum resumen del pase final.'
       }))
     ];
 
@@ -1923,13 +1948,14 @@
     function construirPanelFotos() {
       const contenedor = document.getElementById('filas-foto');
 
-      FILAS_FOTO.forEach(({ archivo, etiqueta }) => {
+      FILAS_FOTO.forEach(({ archivo, etiqueta, descripcion }) => {
         const fila = document.createElement('div');
         fila.className = 'foto-fila';
         fila.innerHTML = `
           <img alt="Vista previa de ${archivo}" hidden>
           <div>
             <label>${etiqueta} <span>· ${archivo}</span></label>
+            <p class="foto-descripcion">${descripcion}</p>
             <span class="foto-estado">Comprobando…</span>
             <input type="file" accept="image/*">
             <button type="button" disabled>Descargar ${archivo}</button>
