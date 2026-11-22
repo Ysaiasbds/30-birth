@@ -1564,7 +1564,7 @@
       <span id="visor-contador"></span>
       <button class="visor-boton" id="visor-cerrar" type="button">Cerrar</button>
     </div>
-    <img class="visor-foto" id="visor-img" alt="">
+    <div class="visor-marco" id="visor-marco"></div>
     <div class="visor-nav">
       <button class="visor-boton" id="visor-ant" type="button">Anterior</button>
       <button class="visor-boton visor-boton-principal" id="visor-sig" type="button">Siguiente</button>
@@ -1989,7 +1989,6 @@
         const fila = document.createElement('div');
         fila.className = 'foto-fila';
         fila.innerHTML = `
-          <img alt="Vista previa de ${archivo}" hidden>
           <div>
             <label>${etiqueta} <span>· ${archivo}</span></label>
             <p class="foto-descripcion">${descripcion}</p>
@@ -2002,7 +2001,8 @@
         comprobarFoto(archivo, fila.querySelector('.foto-estado'));
 
         const entrada = fila.querySelector('input');
-        const vista = fila.querySelector('img');
+        // La vista previa se crea solo cuando hay una foto elegida
+        let vista = null;
         const boton = fila.querySelector('button');
         const botonSubir = fila.querySelector('.subir');
         const estado = fila.querySelector('.foto-estado');
@@ -2013,15 +2013,22 @@
           if (!archivo) return;
           try {
             blobListo = await redimensionarFoto(archivo);
+            if (!vista) {
+              vista = document.createElement('img');
+              vista.alt = `Vista previa de ${archivo}`;
+              fila.prepend(vista);
+            }
             vista.src = URL.createObjectURL(blobListo);
-            vista.hidden = false;
             boton.disabled = false;
             botonSubir.disabled = false;
           } catch (error) {
             blobListo = null;
             boton.disabled = true;
             botonSubir.disabled = true;
-            vista.hidden = true;
+            if (vista) {
+              vista.remove();
+              vista = null;
+            }
             alert(error.message);
           }
         });
@@ -2302,8 +2309,11 @@
 
     function mostrarFotoVisor() {
       const foto = fotosVisor[indiceVisor];
-      document.getElementById('visor-img').src = foto.src;
-      document.getElementById('visor-img').alt = foto.alt;
+      const img = document.createElement('img');
+      img.className = 'visor-foto';
+      img.src = foto.src;
+      img.alt = foto.alt;
+      document.getElementById('visor-marco').replaceChildren(img);
       document.getElementById('visor-contador').textContent = `${indiceVisor + 1} de ${fotosVisor.length}`;
     }
 
@@ -2317,7 +2327,7 @@
 
     function cerrarVisor() {
       document.getElementById('visor').hidden = true;
-      document.getElementById('visor-img').removeAttribute('src');
+      document.getElementById('visor-marco').replaceChildren();
     }
 
     // Siguiente y anterior dan la vuelta al álbum
