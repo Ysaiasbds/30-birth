@@ -1200,16 +1200,7 @@
         En breve, una travesía de pistas y sorpresas te llevará a un destino secreto.
       </p>
 
-      <div class="timer" id="timer" aria-live="polite">
-        <div class="unit"><b id="dias">00</b><span>Días</span></div>
-        <div class="unit"><b id="horas">00</b><span>Horas</span></div>
-        <div class="unit"><b id="minutos">00</b><span>Minutos</span></div>
-        <div class="unit"><b id="segundos">00</b><span>Segundos</span></div>
-      </div>
-
-      <p class="finish-msg" id="finish-msg">¡Es la hora de arrancar! 🚗💨</p>
-
-      <button class="btn" id="btn-abrir" type="button" disabled>Se debe esperar un poco</button>
+      <button class="btn" id="btn-abrir" type="button">Abrir mi regalo</button>
     </section>
 
     <!-- ===== FASE 2: Preparativos de la maleta ===== -->
@@ -1282,11 +1273,6 @@
         Rasca cada pista en orden. Cada una abre la siguiente.
       </p>
 
-      <!-- Espera entre pistas: cuenta atrás hasta la siguiente -->
-      <div class="espera" id="espera" role="status" hidden>
-        <p>La siguiente pista se abre en</p>
-        <span class="espera-tiempo" id="espera-tiempo">60:00</span>
-      </div>
 
       <!-- Pasaporte: cada pista descubierta estampa su sello -->
       <div class="pasaporte" aria-hidden="true">
@@ -1625,37 +1611,6 @@
       mapa.fitBounds(trazo, { padding: [28, 28] });
     }
 
-    /* ===== Cuenta atrás ===== */
-
-    // Actualiza el reloj. Devuelve true mientras falte tiempo.
-    function actualizarCuentaAtras() {
-      const diff = targetDate - new Date();
-
-      if (diff <= 0) {
-        document.getElementById('timer').style.display = 'none';
-        document.getElementById('finish-msg').style.display = 'block';
-        // Al llegar a 00:00:00 (o si ya había pasado) se habilita el inicio del regalo
-        const botonAbrir = document.getElementById('btn-abrir');
-        botonAbrir.disabled = false;
-        botonAbrir.textContent = 'Abrir mi regalo';
-        return false;
-      }
-
-      const totalSeg = Math.floor(diff / 1000);
-      document.getElementById('dias').textContent = pad(Math.floor(totalSeg / 86400));
-      document.getElementById('horas').textContent = pad(Math.floor((totalSeg % 86400) / 3600));
-      document.getElementById('minutos').textContent = pad(Math.floor((totalSeg % 3600) / 60));
-      document.getElementById('segundos').textContent = pad(totalSeg % 60);
-      return true;
-    }
-
-    // Primera pasada inmediata y, si aún no ha llegado la fecha, refresco cada segundo
-    if (actualizarCuentaAtras()) {
-      const idIntervalo = setInterval(() => {
-        if (!actualizarCuentaAtras()) clearInterval(idIntervalo);
-      }, 1000);
-    }
-
     /* ===== Fase 2: maleta ===== */
 
     // Cuenta los objetos marcados en la maleta
@@ -1672,7 +1627,7 @@
         const marcado = objeto.getAttribute('aria-pressed') === 'true';
         objeto.setAttribute('aria-pressed', String(!marcado));
         actualizarContador();
-        // Al completar todas las tareas empieza la espera antes de la primera pista
+        // Al completar todas las tareas, la primera pista se abre si el candado ya está
         const todas = document.querySelectorAll('.item').length;
         if (document.querySelectorAll('.item[aria-pressed="true"]').length === todas) completarTareas();
       });
@@ -1725,17 +1680,17 @@
       return transparentes / total;
     }
 
-    // Descubre una pista y la marca en pasaporte y pase; tras la insignia empieza la espera
+    // Descubre una pista y la marca en pasaporte y pase; tras la insignia se abre la siguiente
     function descubrir(indice) {
       const pista = pistas[indice];
       if (pista.classList.contains('found')) return;
 
       marcarDescubierta(indice);
 
-      // La insignia se muestra primero; después empieza la espera hasta la siguiente pista
+      // La insignia se muestra primero; después se abre la siguiente pista
       mostrarInsignia(pista.dataset.insignia, pista.dataset.icono, () => {
         if (pistas[indice + 1]) {
-          iniciarEspera(indice + 1, ESPERA_TRAS_PISTA[indice]);
+          desbloquearSiguiente(indice + 1);
         } else {
           document.getElementById('nota-pistas').textContent = 'Ya tienes las cinco. Solo falta el pase.';
           document.getElementById('btn-pase').hidden = false;
@@ -1858,8 +1813,6 @@
 
         if (!progreso.tareasHechas) {
           mensaje.textContent = 'Candado abierto. Termina la lista de tareas para continuar.';
-        } else if (progreso.espera) {
-          mensaje.textContent = 'Candado abierto. Las pistas se abren al terminar la espera.';
         } else {
           mensaje.textContent = 'Candado abierto. Rasca la primera pista.';
           desbloquear(0);
@@ -2148,20 +2101,12 @@
       });
     }
 
-    /* ===== Progreso guardado y espera entre pistas ===== */
+    /* ===== Progreso guardado (sin temporizadores) ===== */
 
-    // Minutos de espera entre una pista y la siguiente (cámbialo aquí)
-    const MINUTOS_ENTRE_PISTAS = 60;
-    // Espera tras descubrir cada pista (en minutos): pista 1, 2, 3 y 4.
-    // Tras la 3.ª: 12 h hasta la 4.ª. Tras la 4.ª: 5 h hasta la 5.ª.
-    const ESPERA_TRAS_PISTA = [MINUTOS_ENTRE_PISTAS, MINUTOS_ENTRE_PISTAS, 12 * 60, 5 * 60];
-    // Minutos entre completar la lista de tareas y poder rascar la primera pista
-    const MINUTOS_ANTES_PRIMERA_PISTA = 180;
     const CLAVE_PROGRESO = 'enna-progreso';
-    let intervaloEspera = null;
 
     function leerProgreso() {
-      const inicial = { candado: false, encontradas: [], espera: null };
+      const inicial = { candado: false, encontradas: [], tareasHechas: false };
       try {
         return { ...inicial, ...JSON.parse(localStorage.getItem(CLAVE_PROGRESO)) };
       } catch {
@@ -2177,58 +2122,10 @@
       }
     }
 
-    // Guarda la espera hasta la pista indicada y la muestra
-    function iniciarEspera(indice, minutos = MINUTOS_ENTRE_PISTAS) {
-      const progreso = leerProgreso();
-      progreso.espera = { indice, hasta: Date.now() + minutos * 60 * 1000 };
-      guardarProgreso(progreso);
-      document.getElementById('nota-pistas').textContent = 'Tómatelo con calma: la siguiente pista llega pronto.';
-      mostrarEspera();
-    }
-
-    // Muestra la cuenta atrás y desbloquea la pista al llegar a cero
-    function mostrarEspera() {
-      clearInterval(intervaloEspera);
-      const espera = document.getElementById('espera');
-      const progreso = leerProgreso();
-
-      if (!progreso.espera) {
-        espera.hidden = true;
-        return;
-      }
-
-      const { indice, hasta } = progreso.espera;
-      const tiempo = document.getElementById('espera-tiempo');
-      espera.hidden = false;
-
-      // Devuelve true mientras falte tiempo
-      const actualizar = () => {
-        const restante = hasta - Date.now();
-        if (restante > 0) {
-          const seg = Math.ceil(restante / 1000);
-          tiempo.textContent = `${pad(Math.floor(seg / 60))}:${pad(seg % 60)}`;
-          return true;
-        }
-
-        const actual = leerProgreso();
-        actual.espera = null;
-        guardarProgreso(actual);
-        espera.hidden = true;
-        // La primera pista también necesita el candado abierto
-        if (pistas[indice].hidden && (indice > 0 || actual.candado)) {
-          desbloquear(indice);
-          document.getElementById('nota-pistas').textContent = 'Ya puedes rascar la pista.';
-        } else if (indice === 0) {
-          document.getElementById('nota-pistas').textContent = 'Ya puedes rascar la primera pista. Abre el candado.';
-        }
-        return false;
-      };
-
-      if (actualizar()) {
-        intervaloEspera = setInterval(() => {
-          if (!actualizar()) clearInterval(intervaloEspera);
-        }, 1000);
-      }
+    // Desbloquea la pista siguiente en cuanto se descubre la anterior
+    function desbloquearSiguiente(indice) {
+      if (pistas[indice].hidden) desbloquear(indice);
+      document.getElementById('nota-pistas').textContent = 'Sigue con la siguiente pista.';
     }
 
     // Marca como hechas todas las tareas (al recargar la página)
@@ -2237,23 +2134,20 @@
       actualizarContador();
     }
 
-    // Al completar la lista: empieza la espera de 120 min antes de la primera pista
+    // Al completar la lista: si el candado ya está abierto, se puede rascar la primera pista
     function completarTareas() {
       const progreso = leerProgreso();
       if (progreso.tareasHechas) return;
       progreso.tareasHechas = true;
       guardarProgreso(progreso);
-      iniciarEspera(0, MINUTOS_ANTES_PRIMERA_PISTA);
+      if (progreso.candado && pistas[0].hidden) desbloquear(0);
     }
 
-    // Recupera el candado, las pistas descubiertas y la espera al recargar la página
+    // Recupera el candado y las pistas descubiertas al recargar la página
     function restaurarProgreso() {
       const progreso = leerProgreso();
       if (progreso.tareasHechas) marcarTareasHechas();
-      if (!progreso.candado) {
-        if (progreso.espera) mostrarEspera();
-        return;
-      }
+      if (!progreso.candado) return;
 
       document.getElementById('edad').disabled = true;
       document.getElementById('btn-candado').disabled = true;
@@ -2264,14 +2158,12 @@
         marcarDescubierta(indice);
       });
 
-      if (progreso.espera) {
-        mostrarEspera();
-      } else if (progreso.encontradas.length === pistas.length) {
+      if (progreso.encontradas.length === pistas.length) {
         document.getElementById('nota-pistas').textContent = 'Ya tienes las cinco. Solo falta el pase.';
         document.getElementById('btn-pase').hidden = false;
-      } else {
+      } else if (progreso.tareasHechas) {
         const siguiente = progreso.encontradas.length ? Math.max(...progreso.encontradas) + 1 : 0;
-        if (pistas[siguiente].hidden && progreso.tareasHechas) desbloquear(siguiente);
+        if (pistas[siguiente].hidden) desbloquear(siguiente);
       }
     }
 
